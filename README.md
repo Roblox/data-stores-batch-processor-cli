@@ -508,7 +508,7 @@ _The default values are suitable for most simple migration or deletion tasks. Fo
 | :----------------------- | :------------------------------ | :------ | :----------------------------------------------------------------------------------------------------------------------------------- |
 | errorLogMaxLength        | `--error-log-max-length`        | 50      | Maximum character length of error logs to persist from failed items.                                                                 |
 | jobQueueMaxSize          | `--job-queue-max-size`          | 20      | Maximum number of jobs to hold in the queue at one time.                                                                             |
-| maxItemsPerJob           | `--max-items-per-job`           | 50      | Maximum number of items to process in one job. Note that if `excludeDeletedKeys`                                                     |
+| maxItemsPerJob           | `--max-items-per-job`           | 50      | Maximum number of items to process in one job.                                                                                       |
 | maxTotalFailedItems      | `--max-total-failed-items`      | 100     | Number of failed items that will cause the entire batch process to fail.                                                             |
 | memoryStoresExpiration   | `--memory-stores-expiration`    | 3888000 | Expiration time in seconds for all memory store entries related to the process.                                                      |
 | memoryStoresStorageLimit | `--memory-stores-storage-limit` | \-1     | Storage limit for memory stores (in kilobytes) (-1 for no limit).                                                                    |
