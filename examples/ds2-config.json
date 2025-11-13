@@ -1,0 +1,20 @@
+{
+  "universeId": -1,
+  "placeId": -1,
+  "callback": "examples/ds2-migrate-delete.luau",
+  "outputDirectory": "<insert output directory>",
+  "numProcessingInstances": 9,
+
+  "dataStorePrefix": "<insert ds2 name>/",
+
+  "processItemRateLimit": 50,
+  "numRetries": 5,
+  "retryTimeoutBase": 1,
+  "retryExponentialBackoff": 3,
+  "maxTotalFailedItems": 100,
+  "maxItemsPerJob": 50,
+  "jobQueueMaxSize": 20,
+  "errorLogMaxLength": 50,
+  "progressRefreshTimeout": 5,
+  "memoryStoresExpiration": 3888000
+}

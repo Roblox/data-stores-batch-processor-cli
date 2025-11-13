@@ -1,0 +1,1784 @@
+<h1 id="-roblox-data-stores-batch-processor-cli-technical-guide-">
+  <strong>Roblox Data Stores Batch Processor CLI: Technical Guide</strong>
+</h1>
+<p><strong>⚠️ Use At Your Own Risk</strong></p>
+<p>
+  This CLI is a powerful tool to help creators better manage data in data
+  stores. It directly interacts with your live experience data at bulk.
+</p>
+<p>
+  Batch data processing is a very complex process, and many things can go wrong.
+  <strong
+    >Improper use, incorrect configurations, or errors in custom callback
+    functions can result in permanent, irreversible data loss.</strong
+  >
+  It is strongly recommended to test thoroughly on a test experience first.
+</p>
+<p>
+  <strong
+    >Please read this entire guide carefully before using this tool.</strong
+  >
+  Please be especially cautious if you are doing a data migration while your
+  experience is still reading / writing those keys. You will need to implement
+  handling for this — this is called a live-path migration and is covered later
+  in <strong>Section 10</strong>.
+</p>
+<p>By using this tool, you acknowledge and accept all risks.</p>
+<p>
+  Welcome to the official guide for the Roblox Data Stores Batch Processor
+  Command-Line Interface (CLI). This document provides technical guidance for
+  installing, configuring, and operating the tool.
+</p>
+<p>
+  This tool is open source under the MIT License! Feel welcome to fork the
+  repository and stage a pull request with your contributions. Please see the
+  <strong><a href="./LICENSE">LICENSE</a></strong> for details. This tool uses
+  third-party modules; their licenses are listed in
+  <strong><a href="./ATTRIBUTIONS.md">ATTRIBUTIONS.md</a>.</strong>
+</p>
+<h2 id="-1-overview-"><strong>1. Overview</strong></h2>
+<p>
+  The Batch Processor CLI is a powerful command-line tool built on the Lune
+  runtime. It performs large-scale, custom operations on your experience&#39;s
+  data stores by leveraging memory stores, data stores, and
+  <code>LuauExecutionSessionTasks</code> Open Cloud APIs.
+</p>
+<p>
+  The CLI orchestrates the entire workflow, from task creation to execution,
+  while providing you with the necessary tools to actively manage and monitor
+  your running batch processes.
+</p>
+<h3 id="-1-1-use-cases-"><strong>1.1. Use Cases</strong></h3>
+<p>
+  The tool allows you to run custom Luau logic across all keys within a data
+  store or across all data stores within an experience. This enables a variety
+  of powerful data operations, including:
+</p>
+<ul>
+  <li>
+    <strong>Schema Migrations:</strong> Updating the data structure for
+    thousands or millions of user profiles after an update.
+  </li>
+  <li>
+    <strong>Bulk Data Deletion:</strong> Removing specific data fields from all
+    user accounts for data cleanup or compliance, or clearing obsolete data
+    stores.
+  </li>
+</ul>
+<p>
+  If you are a DataStore2 or Berezaa Method user, this tool will be especially
+  useful for data migration and cleanup!
+</p>
+<h3 id="-1-2-how-it-works-"><strong>1.2. How It Works</strong></h3>
+<p>
+  At a high level, the tool operates by creating and managing
+  <code>LuauExecutionSessionTasks</code> to execute your custom Luau scripts.
+  The batch process is broken down into two stages:
+</p>
+<ul>
+  <li>
+    <strong>Stage 1: Scan and Queue</strong><br />The first stage scans your
+    experience to identify all target data stores or keys based on your provided
+    criteria. It then populates a memory store queue with these items, which are
+    considered &quot;jobs&quot; for the next stage. Stage 1 also accumulates
+    progress as jobs are completed, updating overall batch process state.
+  </li>
+  <li>
+    <strong>Stage 2: Dequeue and Process</strong><br />The second stage dequeues
+    the jobs created in Stage 1 and executes your custom Luau logic for each
+    item within a job. This is where your data manipulation, migration, or
+    analysis takes place.
+  </li>
+</ul>
+<p>
+  If the batch process runs to completion, at-least-once processing is
+  guaranteed.
+</p>
+<h2 id="-2-getting-started-"><strong>2. Getting Started</strong></h2>
+<p>Follow these steps to set up the CLI and prepare your environment.</p>
+<h3 id="-2-1-prerequisites-"><strong>2.1. Prerequisites</strong></h3>
+<ol>
+  <li>
+    <strong>Unzip Module:</strong> Unzip the provided Batch Processing module
+    and save it to your local machine.
+  </li>
+  <li>
+    <strong>Install Lune:</strong>
+    <a href="https://lune-org.github.io/docs/getting-started/1-installation"
+      >Install the Lune runtime</a
+    >
+    on your machine. This is required to execute the tool.
+  </li>
+  <li>
+    <strong>Configure Open Cloud API Key:</strong> The tool requires an Open
+    Cloud API Key with specific permissions.
+    <ul>
+      <li>
+        Navigate to the
+        <a href="https://create.roblox.com/dashboard/credentials"
+          >Creator Hub API Extensions</a
+        >.
+      </li>
+      <li>Create a new API Key or edit an existing one.</li>
+      <li>
+        Grant the key the necessary permissions for your target experience, as
+        detailed in <strong>Appendix A: API Key Permissions</strong>.
+      </li>
+      <li>Save the generated API key to a secure location.</li>
+    </ul>
+  </li>
+</ol>
+<h3 id="-2-2-running-a-batch-process-">
+  <strong>2.2. Running a Batch Process</strong>
+</h3>
+<ol>
+  <li>
+    <strong>Set API Key Environment Variable:</strong> Before running a command,
+    set your API Key as an environment variable. You can do this directly in
+    your terminal, or see <strong>Appendix F: Tips and Tricks</strong> for
+    further ways of securing your API Key.
+    <ul>
+      <li>
+        <strong>macOS/Linux (sh, bash, zsh):</strong><br /><code
+          >export API_KEY=&quot;&lt;Your-API-Key&gt;&quot;</code
+        >
+      </li>
+      <li>
+        <strong>Windows (PowerShell):</strong><br /><code
+          >$env:API_KEY=&quot;&lt;Your-API-Key&gt;&quot;</code
+        >
+      </li>
+    </ul>
+  </li>
+  <li>
+    <strong>Create a Callback Function:</strong> Write your custom processing
+    logic in a Luau file. See
+    <strong>Appendix C: Custom Callback Function</strong> for requirements and
+    examples. This callback function will be called on
+    <strong>every key / data store scanned by the batch processor</strong>. Each
+    item will be processed independently.
+  </li>
+  <li>
+    <strong>Execute Command:</strong> Navigate to the top-level directory of the
+    unzipped module and run one of the available commands (process-keys or
+    process-data-stores). For example, call
+    <ul>
+      <li>
+        <code
+          >lune run batch-process process-keys mybatchprocess -c
+          myconfig.json</code
+        >
+      </li>
+    </ul>
+  </li>
+</ol>
+<h3 id="-2-3-foreground-process-"><strong>2.3 Foreground Process</strong></h3>
+<p>
+  The batch process runs actively in the foreground, and you must
+  <strong>keep the terminal session open</strong> for the entire duration of the
+  job.
+</p>
+<p>
+  This is because the CLI performs a critical &quot;keep-alive&quot; function.
+  Today Session Tasks have a finite lifetime (a 5-minute time limit) and can
+  terminate for various reasons. The CLI actively monitors these sessions and
+  automatically restarts any that die to ensure that long-running batch
+  processes can continue until completion. Closing the terminal will terminate
+  this orchestration process. Batch process state is stored in memory stores, so
+  if the terminal closes, you can <strong>resume</strong> a previously-running
+  batch process.
+</p>
+<p>
+  Note that if you exit out of the foreground process, the batch process will
+  continue to execute until all Session Tasks terminate organically.
+</p>
+<h3 id="-2-4-cleaning-up-a-batch-process-">
+  <strong>2.4 Cleaning up a Batch Process</strong>
+</h3>
+<p>
+  After a batch process finishes or fails, the process name continues to be
+  reserved until the process is cleaned up. This allows you to review and keep a
+  record of previously completed batch processes. To cleanup a batch process,
+  you can call the <code>cleanup</code> command like so:
+</p>
+<ul>
+  <li>
+    <code>lune run batch-process cleanup mybatchprocess -c myconfig.json</code>
+  </li>
+</ul>
+<p>
+  “Cleaning up” a batch process implies deleting the data stores / memory stores
+  resources used for execution – see <strong>Appendix D</strong> for information
+  on these resources.
+</p>
+<h2 id="-3-best-practices-"><strong>3. Best Practices</strong></h2>
+<p>
+  Before executing a large-scale batch process on your production data, it is
+  crucial to follow these testing and verification steps to prevent unintended
+  consequences.
+</p>
+<ul>
+  <li>
+    <strong>Test on a Non-Production Experience First</strong><br />Always run
+    your batch process against a test data store with a smaller, representative
+    dataset. This allows you to validate your callback logic and tune
+    configurations in a safe environment without impacting live user data.
+    Verify that the batch process is running using the
+    <a
+      href="https://create.roblox.com/docs/cloud-services/data-stores/observability"
+      ><strong>Data Stores Observability Dashboard</strong></a
+    >, and verify any changes to your data stores manually in
+    <a
+      href="https://create.roblox.com/docs/cloud-services/data-stores/data-stores-manager"
+      ><strong>Data Stores Manager</strong></a
+    >. Also ensure that your memory stores usage and error rate from the batch
+    process is at acceptable levels with the
+    <a
+      href="https://create.roblox.com/docs/cloud-services/memory-stores/observability"
+      ><strong>Memory Stores Observability Dashboard</strong></a
+    >.
+  </li>
+  <li>
+    <strong>Perform a Scope Test</strong><br />Perform a “scope test” by running
+    a batch process with an empty callback function on your keys / data stores.
+    Given your <code>--key-prefix</code> or <code>--data-store-prefix</code>,
+    observe how many items get captured by the batch process and ensure it
+    coincides with your expected count.
+  </li>
+  <li>
+    <strong>Perform a Spot Test</strong><br />Once you are confident in your
+    script and configurations, perform a limited &quot;spot test&quot; on your
+    production environment. Use the <code>--key-prefix</code> or
+    <code>--data-store-prefix</code> options to target a single, specific data
+    point (e.g., your own test account’s key). Verify that the operation
+    completes successfully and has the intended effect on that single item
+    before running it on the entire dataset.
+  </li>
+  <li>
+    <strong>Verify All Configurations</strong><br />Before initiating a full
+    run, double-check all provided configurations—either in your config file or
+    as command-line options.
+    <strong
+      >We have picked default configurations that work for most use cases, but
+      they may not work for yours!</strong
+    >
+    Ensure all values are within reasonable limits for your use case and that
+    you understand the performance implications of all configurations.
+  </li>
+  <li>
+    <strong>Monitor Batch Process Runs</strong><br />After starting a batch
+    process, monitor the run for several minutes before walking away. Follow the
+    same steps as discussed above in
+    <strong>Test on a Non-Production Experience First</strong>.
+  </li>
+</ul>
+<h2 id="-4-command-reference-"><strong>4. Command Reference</strong></h2>
+<h3 id="-4-1-process-keys-"><strong>4.1. process-keys</strong></h3>
+<p>
+  Starts a batch process that iterates over key names within a single standard
+  data store.
+</p>
+<p><strong>Usage Examples:</strong></p>
+<pre><code class="lang-sh"><span class="hljs-comment"># Using direct command-line options</span>
+lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-built_in">process</span>-<span class="hljs-built_in">keys</span> &lt;<span class="hljs-built_in">process</span>-name&gt; <span class="hljs-comment">--data-store-name &lt;name&gt; [other-options...]</span>
+
+<span class="hljs-comment"># Using a configuration file</span>
+lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-built_in">process</span>-<span class="hljs-built_in">keys</span> &lt;<span class="hljs-built_in">process</span>-name&gt; <span class="hljs-comment">--config &lt;filepath&gt;</span>
+</code></pre>
+<p><strong>Arguments:</strong></p>
+<ul>
+  <li>
+    <strong><code>&lt;process-name&gt;</code></strong
+    >: The unique name of the new batch process.
+  </li>
+</ul>
+<p><strong>Command-Specific Options:</strong></p>
+<ul>
+  <li>
+    <strong><code>--data-store-name / -d</code> :</strong> The name of the data
+    store to scan.
+  </li>
+  <li>
+    <strong><code>--data-store-scope / -s</code> :</strong> The scope of the
+    data store.
+  </li>
+  <li>
+    <strong><code>--key-prefix / -P</code> :</strong> A prefix to filter which
+    keys are processed.
+  </li>
+  <li>
+    <strong><code>--exclude-deleted-keys</code> :</strong> A flag to exclude
+    keys that have been previously deleted.
+  </li>
+</ul>
+<p>
+  <strong>Shared Options:</strong><br />This command also accepts all required
+  options (<code>--universe-id</code>, etc.) and all optional processing
+  configurations. <strong>See Appendix B: Configuration Glossary</strong> for
+  the full list.
+</p>
+<h3 id="-4-2-process-data-stores-">
+  <strong>4.2. process-data-stores</strong>
+</h3>
+<p>
+  Starts a batch process that iterates over standard data store names within an
+  experience.
+</p>
+<p><strong>Usage Examples:</strong></p>
+<pre><code class="lang-sh"><span class="hljs-comment"># Using direct command-line options</span>
+lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-built_in">process</span>-data-stores &lt;<span class="hljs-built_in">process</span>-name&gt; <span class="hljs-comment">--data-store-prefix &lt;prefix&gt; [other-options...]</span>
+
+<span class="hljs-comment"># Using a configuration file</span>
+lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-built_in">process</span>-data-stores &lt;<span class="hljs-built_in">process</span>-name&gt; <span class="hljs-comment">--config &lt;filepath&gt;</span>
+</code></pre>
+<p><strong>Arguments:</strong></p>
+<ul>
+  <li>
+    <strong><code>&lt;process-name&gt;</code></strong> : The unique name of the
+    new batch process.
+  </li>
+</ul>
+<p><strong>Command-Specific Options:</strong></p>
+<ul>
+  <li>
+    <strong><code>--data-store-prefix / -P</code></strong> : A prefix to filter
+    which data stores are processed.
+  </li>
+</ul>
+<p>
+  <strong>Shared Options:</strong><br />This command also accepts all required
+  options (<code>--universe-id</code>, etc.) and all optional processing
+  configurations. See <strong>Appendix B: Configuration Glossary</strong> for
+  the full list.
+</p>
+<h3 id="-4-3-resume-"><strong>4.3. resume</strong></h3>
+<p>
+  Resumes a previously running batch process that has not completed. A batch
+  process is considered incomplete if it fails, or if the terminal is closed and
+  the session tasks time out before all items can be processed.
+</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-sh"><span class="hljs-comment"># Using direct command-line options</span>
+lune <span class="hljs-built_in">run</span> batch-process resume &lt;process-<span class="hljs-built_in">name</span>&gt; <span class="hljs-comment">--universe-id &lt;id&gt;</span>
+
+<span class="hljs-comment"># Using a configuration file</span>
+lune <span class="hljs-built_in">run</span> batch-process resume &lt;process-<span class="hljs-built_in">name</span>&gt; <span class="hljs-comment">--config &lt;filepath&gt;</span>
+</code></pre>
+<p><strong>Arguments:</strong></p>
+<ul>
+  <li>
+    <strong><code>&lt;process-name&gt;</code></strong> : The unique name of the
+    previously run batch process to resume.
+  </li>
+</ul>
+<p><strong>Option:</strong></p>
+<ul>
+  <li>
+    <strong><code>--universe-id / -u</code></strong> : The universe to load /
+    resume the batch process on.
+  </li>
+</ul>
+<p>
+  <strong>Shared Options:</strong><br />When resuming a process, all original
+  configurations are loaded from the saved state. You can optionally override
+  any of the following configurations:
+</p>
+<ul>
+  <li><code>numProcessingInstances</code></li>
+  <li><code>outputDirectory</code></li>
+  <li><code>errorLogMaxLength</code></li>
+  <li><code>jobQueueMaxSize</code></li>
+  <li><code>maxTotalFailedItems</code></li>
+  <li><code>memoryStoresExpiration</code></li>
+  <li><code>memoryStoresStorageLimit</code></li>
+  <li><code>numRetries</code></li>
+  <li><code>retryTimeoutBase</code></li>
+  <li><code>retryExponentialBackoff</code></li>
+  <li><code>processItemRateLimit</code></li>
+  <li><code>progressRefreshTimeout</code></li>
+</ul>
+<p><strong>Important Notes</strong>:</p>
+<ul>
+  <li>
+    Resuming will also
+    <strong>reload the callback function from the filepath</strong>. Please
+    ensure that the callback function and filepath are still correct before
+    resuming a batch process.
+  </li>
+  <li>
+    Resuming will <strong>reset the output directory</strong>. If you would like
+    to save the previous output, then please change the outputDirectory
+    configuration while resuming.
+  </li>
+  <li>
+    When resuming a previously failed batch process, it is
+    <strong>required</strong> that you set the
+    <code>maxTotalFailedItems</code> to a value greater than the current failed
+    item count.
+  </li>
+  <li>
+    The new configurations are only applied to
+    <strong>new session tasks</strong>. So, if you resume a batch process that
+    still has active Session Tasks running, the process will continue with the
+    old configurations until these sessions complete.
+  </li>
+</ul>
+<h3 id="-4-4-cleanup-"><strong>4.4. cleanup</strong></h3>
+<p>Cleans up an old batch process.</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-sh"><span class="hljs-comment"># Using direct command-line options</span>
+lune <span class="hljs-built_in">run</span> batch-process cleanup &lt;process-<span class="hljs-built_in">name</span>&gt; <span class="hljs-comment">--universe-id &lt;id&gt;</span>
+
+<span class="hljs-comment"># Using a configuration file</span>
+lune <span class="hljs-built_in">run</span> batch-process cleanup &lt;process-<span class="hljs-built_in">name</span>&gt; <span class="hljs-comment">--config &lt;filepath&gt;</span>
+</code></pre>
+<p><strong>Command-Specific Arguments:</strong></p>
+<ul>
+  <li>
+    <strong><code>&lt;process-name&gt;</code></strong> : The unique name of the
+    previously run batch process to resume.
+  </li>
+</ul>
+<p><strong>Option:</strong></p>
+<ul>
+  <li>
+    <strong><code>--universe-id / -u</code></strong> : The universe to load /
+    resume the batch process on.
+  </li>
+</ul>
+<h3 id="-4-5-list-"><strong>4.5. list</strong></h3>
+<p>Lists all batch processes.</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-sh"><span class="hljs-comment"># Using direct command-line options</span>
+lune <span class="hljs-built_in">run</span> batch-process <span class="hljs-built_in">list</span> <span class="hljs-comment">--universe-id &lt;id&gt;</span>
+
+<span class="hljs-comment"># Using a configuration file</span>
+lune <span class="hljs-built_in">run</span> batch-process <span class="hljs-built_in">list</span> <span class="hljs-comment">--config &lt;filepath&gt;</span>
+</code></pre>
+<p><strong>Option:</strong></p>
+<ul>
+  <li>
+    <strong><code>--universe-id / -u</code></strong> : The universe to load /
+    resume the batch process on.
+  </li>
+</ul>
+<h2 id="-5-configuration-"><strong>5. Configuration</strong></h2>
+<p>
+  You can configure a batch process using a combination of a configuration file,
+  command-line options, and interactive prompts. The tool uses a clear order of
+  precedence to determine the final configurations for a run.
+</p>
+<h3 id="-order-of-precedence-"><strong>Order of Precedence</strong></h3>
+<p>
+  Configurations are applied in the following order, with later methods
+  overriding earlier ones:
+</p>
+<ol>
+  <li>
+    <strong>Default Values:</strong> Built-in defaults for optional
+    configurations.
+  </li>
+  <li>
+    <strong>Configuration File:</strong> Configurations loaded from a JSON file
+    specified with the <code>-c</code> / <code>--config</code> flag.
+  </li>
+  <li>
+    <strong>Command-Line Options:</strong> Flags passed directly in the command
+    (e.g., <code>--num-retries 5</code>). These will always override any values
+    set in a config file.
+  </li>
+  <li>
+    <strong>Interactive Prompts:</strong> For any
+    <em>required</em> configurations not provided by the methods above, the CLI
+    will prompt for input.
+  </li>
+</ol>
+<h3 id="-recommended-workflow-"><strong>Recommended Workflow</strong></h3>
+<p>
+  A powerful way to use the CLI is to combine a configuration file with
+  command-line overrides. This allows you to maintain consistent base
+  configurations while retaining flexibility.
+</p>
+<ol>
+  <li>
+    <strong>Create a base config.json file</strong> with your common
+    configurations (like universeId, placeId, and default processing
+    parameters).
+  </li>
+  <li>
+    <strong>Use command-line options</strong> to override specific
+    configurations for a particular run.
+  </li>
+</ol>
+<p>
+  <strong><em>Example:</em></strong
+  ><br />Imagine <code>my_config.json</code> sets <code>numRetries</code> to
+  <code>3</code>. You can override it for a single run:
+</p>
+<pre><code class="lang-sh"><span class="hljs-comment"># This run will use numRetries = 5, overriding the value from the file.</span>
+<span class="hljs-comment"># All other settings will be loaded from my_config.json.</span>
+lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-built_in">process</span>-<span class="hljs-built_in">keys</span> my_process -c my_config.json <span class="hljs-comment">--num-retries 5</span>
+</code></pre>
+<p>
+  See <strong>Appendix B: Configuration Glossary</strong> for a full list of
+  available options.
+</p>
+<h2 id="-6-observability-and-debugging-">
+  <strong>6. Observability and Debugging</strong>
+</h2>
+<h3 id="-6-1-output-files-"><strong>6.1. Output Files</strong></h3>
+<p>
+  The CLI generates an output directory for each batch process, providing tools
+  for monitoring and debugging. To inspect session details and logs, you must
+  call the Open Cloud endpoints with your API key included in the
+  <strong>x-api-key</strong> header.
+</p>
+<ul>
+  <li>
+    <strong><code>failed_items.output</code></strong
+    ><br />Contains a line-separated record for each item that failed
+    processing.<br /><strong><em>Format:</em></strong>
+    <code
+      >&lt;item_name&gt;|&lt;error_time&gt;|&lt;truncated_error_log&gt;|&lt;session_path&gt;</code
+    ><br />Metadata for failed items (such as error time, logs, and session
+    path) is never guaranteed, and will always be lost upon resuming a batch
+    process. For persistent error tracking, please ensure this information is
+    saved to a separate location before resuming a batch process.
+  </li>
+  <li>
+    <strong><code>process.output</code></strong
+    ><br />Displays the current status of the process along with its active
+    configurations.
+  </li>
+  <li>
+    <strong
+      ><code
+        >stage1_session_paths_active.output &amp;
+        stage2_session_paths_active.output</code
+      ></strong
+    ><br />Lists the session paths for currently active Stage 1 (scanning) and
+    Stage 2 (processing) tasks. Note that logs are only available after a
+    session completes.<br />Example Request:
+    <code>GET https://apis.roblox.com/cloud/v2/&lt;session_path&gt;</code>
+  </li>
+  <li>
+    <strong
+      ><code
+        >stage1_session_paths_complete.output &amp;
+        stage2_session_paths_complete.output</code
+      ></strong
+    ><br />An archive of session paths that have completed execution.
+  </li>
+  <li>
+    <strong><code>session_logs directory</code></strong
+    ><br />Contains a file for each completed sessions’ task logs. Each log
+    file’s name is <code>&lt;task ID&gt;.output</code>, where the task ID is the
+    final component of the session path.
+  </li>
+  <li>
+    <strong><code>cli.output</code></strong
+    ><br />A list of warnings and other debugging messages coming directly from
+    the CLI. You will likely not need to use this, but in cases of unexpected
+    behavior it may contain insights into the issue.
+  </li>
+</ul>
+<p>
+  Given a session path from <code>failed_items.output</code> or
+  <code>stage[1/2]_session_paths_[active/complete].output</code>, you can find
+  its logs in the <code>session_logs</code> directory.
+</p>
+<p>
+  Alternatively, you can manually query the session task status or logs by
+  requesting the following Open Cloud endpoints. Include your API key in the
+  <code>x-api-key</code> header before making the requests:
+</p>
+<ul>
+  <li>
+    <strong>Query Task Status:</strong><br /><code
+      >GET https://apis.roblox.com/cloud/v2/&lt;session_path&gt;</code
+    >
+  </li>
+  <li>
+    <strong>Query Logs:</strong><br /><code
+      >GET https://apis.roblox.com/cloud/v2/&lt;session_path&gt;/logs</code
+    >
+  </li>
+</ul>
+<h3 id="-6-2-troubleshooting-"><strong>6.2. Troubleshooting</strong></h3>
+<p>
+  If a batch process appears to be stalled or not working as expected, follow
+  these diagnostic steps. Some circumstances can cause it to fail or to
+  <em>appear</em> unresponsive while it is still running in the background.
+</p>
+<ol>
+  <li>
+    <strong>Check Memory Stores Dashboard:</strong> The first step is to verify
+    that the process is actually running. The CLI&#39;s orchestration logic
+    heavily uses memory stores.
+    <ul>
+      <li>
+        Navigate to your <strong>Memory Stores Dashboard</strong> on the Creator
+        Hub.
+      </li>
+      <li>
+        Check for read and write activity. A running process will generate
+        continuous activity. This is the primary indicator that the tool is
+        operational.
+      </li>
+      <li>
+        Ensure that your experience has
+        <strong>available memory stores quota</strong>. If your experience is
+        out of available storage or Request Units, the batch process may stall.
+      </li>
+    </ul>
+  </li>
+  <li>
+    <strong>Inspect Session Logs for Completed Tasks:</strong> If memory stores
+    are active but you see no progress, a session may have completed or errored
+    out.
+    <ul>
+      <li>
+        Wait for a session path to appear in one of the ..._complete.output
+        files in your output directory.
+      </li>
+      <li>
+        Once a path appears, check for its logs in the session_logs directory,
+        or query the Open Cloud endpoint directly.
+      </li>
+      <li>
+        Reading these logs can help diagnose issues within the Luau callback
+        script or reveal problems like exceeding memory store storage limits,
+        which might prevent the process from updating its state.
+      </li>
+      <li>
+        Note that there may be warning messages implying that the process has
+        hit its configured <code>memoryStoresStorageLimit</code>. These are not
+        indicative of your experience being fully out of memory stores quota --
+        to be certain, we recommend checking your memory stores dashboard.
+      </li>
+    </ul>
+  </li>
+  <li>
+    <strong>Review the cli.output File:</strong> In rare cases, the CLI itself
+    may encounter an unrecoverable error.
+    <ul>
+      <li>Check the cli.output file in your output directory.</li>
+      <li>
+        This file contains critical errors related to the CLI&#39;s internal
+        operations. An error in this file indicates an issue with the tool
+        itself, rather than with the Luau scripts it is orchestrating. The CLI
+        has built-in retry logic for all essential operations; if it exhausts
+        its retries, it will terminate and log the final error here.
+      </li>
+    </ul>
+  </li>
+</ol>
+<h2 id="-7-performance-tuning-and-resource-management-">
+  <strong>7. Performance Tuning and Resource Management</strong>
+</h2>
+<p>
+  This section provides guidance on how to configure the CLI to balance
+  processing speed with resource consumption.
+</p>
+<h3 id="-7-1-understanding-and-managing-memory-stores-usage-">
+  <strong>7.1. Understanding and Managing Memory Stores Usage</strong>
+</h3>
+<p>
+  The CLI uses memory stores for job orchestration. Before starting a process,
+  the tool will provide you with an
+  <strong>estimated upper bound for memory stores usage</strong> (both for
+  access in Request Units/min and for storage in KB) based on your
+  configurations. This allows you to assess the potential impact on your
+  experience, especially if it has low concurrent users (CCU) or already uses
+  memory stores heavily.
+</p>
+<p>
+  You can further control resource consumption with the
+  <code>--memory-stores-storage-limit</code> option. This sets a safety cap (in
+  kilobytes) for the batch process. If the tool detects that storage usage is
+  approaching this limit, it will automatically slow down or pause the Stage 1
+  scanning process to allow the Stage 2 workers to clear the job queue. This
+  reduces memory pressure and prevents the process from failing due to storage
+  limits.
+</p>
+<p>
+  Be especially wary of your storage quota. If the storage limit is ever
+  reached, the batch processor may freeze indefinitely, and you may need to
+  flush your memory stores or cleanup your batch process.
+</p>
+<h3 id="-7-2-optimizing-for-processing-speed-vs-resource-usage-">
+  <strong>7.2. Optimizing for Processing Speed vs. Resource Usage</strong>
+</h3>
+<p>
+  Tuning your batch process involves a trade-off between speed and the
+  consumption of memory store resources. The configurations with the largest
+  impact are <code>numProcessingInstances</code>, <code>maxItemsPerJob</code>,
+  and <code>jobQueueMaxSize</code>.
+</p>
+<h4 id="-to-maximize-processing-speed-">
+  <strong>To Maximize Processing Speed:</strong>
+</h4>
+<ul>
+  <li>
+    <strong>Do:</strong> Increase <code>numProcessingInstances</code>. This is
+    the primary lever for speed, as it increases the number of concurrent
+    workers processing items.
+  </li>
+  <li>
+    <strong>Do:</strong> Increase <code>maxItemsPerJob</code>. This allows the
+    Stage 1 scanner to enqueue jobs more quickly by fetching more items per List
+    call, which helps keep your processing instances fed with work.
+  </li>
+  <li>
+    <strong>Be Aware:</strong> This strategy will significantly increase both
+    memory store access (RU/min) and storage usage. It is best suited for
+    experiences with high CCU and a large memory store quota.
+  </li>
+</ul>
+<h4 id="-to-minimize-memory-stores-storage-access-impact-">
+  <strong>To Minimize Memory Stores Storage / Access Impact:</strong>
+</h4>
+<p>
+  This is recommended for experiences with low CCU or those that already use
+  memory stores heavily for live game features.
+</p>
+<ul>
+  <li>
+    <strong>Do:</strong> Use a lower <code>numProcessingInstances</code> (e.g.,
+    1-3). This is the most effective way to reduce memory store access usage.
+  </li>
+  <li>
+    <strong>Do:</strong> Keep <code>jobQueueMaxSize</code> at a low value (e.g.,
+    the default of 20). A large queue is unnecessary if the processing rate is
+    slower and only serves to consume storage.
+  </li>
+  <li>
+    <strong>Do:</strong> Keep <code>maxItemsPerJob</code> at a moderate value. A
+    smaller job size reduces the amount of data stored in the queue at any given
+    time.
+  </li>
+  <li>
+    <strong>Be Aware:</strong> This will result in a slower overall batch
+    process but ensures the tool has a minimal footprint on your
+    experience&#39;s resources.
+  </li>
+</ul>
+<h4 id="-what-not-to-do-"><strong>What Not to Do:</strong></h4>
+<ul>
+  <li>
+    <strong>Don&#39;t</strong> set <code>jobQueueMaxSize</code> to a very high
+    number unless you have a specific reason. The queue is unlikely to fill up
+    in most scenarios, and a large value primarily consumes unnecessary storage.
+  </li>
+  <li>
+    <strong>Don&#39;t</strong> set <code>maxItemsPerJob</code> so high that a
+    single job cannot be completed within the 5-minute
+    <code>LuauExecutionSessionTask</code> lifetime. A safe upper bound is
+    <code>maxItemsPerJob &lt; processItemRateLimit * 4</code>.
+  </li>
+</ul>
+<p>
+  The default optional configurations are tuned to suffice for most batch
+  processing scenarios. However, it is ultimately up to you to tune the
+  configurations to your particular use case.
+</p>
+<h2 id="-8-example-use-case-data-deletion-">
+  <strong>8. Example Use Case: Data Deletion</strong>
+</h2>
+<p>
+  Deleting all data in a single, obsolete data store can be done using the
+  Delete Data Store API directly from the Data Stores Manager on Creator Hub.
+  However, this may take up to 30 days to reduce your storage footprint. To
+  delete data faster, you may use the batch processor. Please take caution that
+  you are only deleting data from a data store that you are
+  <strong>no longer using</strong>.
+</p>
+<ol>
+  <li>
+    <strong>Create a Deletion Callback:</strong> Use the following callback with
+    optional logging:
+  </li>
+</ol>
+<pre><code><span class="hljs-built_in">local</span> DataStoreService = game:GetService(<span class="hljs-string">"DataStoreService"</span>)
+<span class="hljs-built_in">local</span> dataStoreToDelete = DataStoreService:GetDataStore(<span class="hljs-string">"&lt;INSERT DATA STORE NAME&gt;"</span>, <span class="hljs-string">"&lt;INSERT DATA STORE SCOPE&gt;"</span>)
+
+<span class="hljs-literal">return</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-title">item</span>)</span>
+    ...
+    <span class="hljs-comment">-- &lt;ADD OPTIONAL LOGGING HERE&gt;</span>
+    ...
+    dataStoreToDelete:RemoveAsync(<span class="hljs-keyword">item</span>)
+<span class="hljs-keyword">end</span>
+</code></pre>
+<ol>
+  <li>
+    <strong>Create the Configuration File</strong> (or provide arguments on the
+    command line)
+  </li>
+  <li>
+    <strong
+      >Run the <code>process-keys</code> command to kick off the
+      deletion:</strong
+    >
+    e.g.<br /><code
+      >lune run batch-process process-keys DS_DELETION_JUNE17 -c &lt;config
+      filepath&gt;.json</code
+    >
+  </li>
+</ol>
+<p>
+  On a related note, bulk Data Store deletion can be achieved by integrating the
+  Deletion API with the batch processor. Please take caution that you are only
+  deleting data stores that you are no longer using.
+</p>
+<ol>
+  <li>
+    <strong>Create a Deletion Callback:</strong> Use the following callback with
+    optional logging:
+  </li>
+</ol>
+<pre><code><span class="hljs-keyword">local</span> DataStoreService = game:GetService(<span class="hljs-string">"DataStoreService"</span>)
+<span class="hljs-keyword">local</span> dataStoreToDelete = DataStoreService:GetDataStore(<span class="hljs-string">"&lt;INSERT DATA STORE NAME&gt;"</span>, <span class="hljs-string">"&lt;INSERT DATA STORE SCOPE&gt;"</span>)
+
+<span class="hljs-keyword">local</span> DataStoreService = game:GetService(<span class="hljs-string">"DataStoreService"</span>)
+<span class="hljs-keyword">local</span> HttpService = game:GetService(<span class="hljs-string">"HttpService"</span>)
+<span class="hljs-built_in">
+return</span> function(<span class="hljs-built_in">item</span>)
+    ...
+    <span class="hljs-comment">-- &lt;ADD OPTIONAL LOGGING HERE&gt;</span>
+    ...
+    <span class="hljs-keyword">local</span> encodedDataStoreName = HttpService:UrlEncode(dataStoreName)
+    <span class="hljs-keyword">local</span> apiKey = HttpService:GetSecret(&lt;insert your api key secret here&gt;)
+    <span class="hljs-keyword">local</span> response = HttpService:RequestAsync({
+        Url = <span class="hljs-string">"https://apis.roblox.com/cloud/v2/universes/"</span> .. UNIVERSE_ID
+.. <span class="hljs-string">"/data-stores/"</span> .. encodedDataStoreName,
+        Method = <span class="hljs-string">"DELETE"</span>,
+        Headers = {
+            [<span class="hljs-string">"x-api-key"</span>] = apiKey,
+            [<span class="hljs-string">"Content-Type"</span>] = <span class="hljs-string">"application/json
+        },
+    })
+    ...
+    -- &lt;ADD OPTIONAL LOGGING HERE&gt;
+    ...
+end</span>
+</code></pre>
+<ol>
+  <li>
+    <strong>Create the Configuration File</strong> (or provide arguments on the
+    command line)
+  </li>
+  <li>
+    <strong
+      >Run the <code>process-data-stores</code> command to kick off the
+      deletion:</strong
+    >
+    e.g.<br /><code
+      >lune run batch-process process-data-stores DS_DELETION_JUNE17 -c
+      &lt;config filepath&gt;.json</code
+    >
+  </li>
+</ol>
+<h2 id="-9-example-use-case-data-migrations-">
+  <strong>9. Example Use Case: Data Migrations</strong>
+</h2>
+<h3 id="-9-1-general-migration-strategy-">
+  <strong>9.1. General Migration Strategy</strong>
+</h3>
+<p>
+  When performing a large-scale data migration, it is critical to handle cases
+  where users might join your experience mid-migration. This requires a robust
+  strategy to ensure data integrity.
+</p>
+<ol>
+  <li>
+    <strong>Implement a Live-Path Migration:</strong> Before starting the batch
+    process, implement and deploy live-server code that handles migration for
+    any user who joins the experience. This &quot;live path&quot; ensures that
+    active users are migrated on-the-fly. This logic must use a
+    <strong>migration marker</strong> to indicate that data has been migrated.
+  </li>
+  <li>
+    <strong>Use a Migration Marker:</strong> A migration marker is a piece of
+    data or any signifier that indicates a specific key has already been
+    migrated. Your callback function for the batch process
+    <strong>must</strong> check for this marker before attempting to migrate
+    data. This prevents the batch process from overwriting data that was already
+    migrated by the live-path logic, making the process idempotent (safe to run
+    multiple times).
+  </li>
+  <li>
+    <strong>Recommended Marker Patterns:</strong>
+    <ul>
+      <li>
+        <strong>Writing to a New Data Store (Recommended):</strong> The safest
+        approach is to read data from the old data store and write the migrated
+        data to a <em>new</em> data store. The migration marker is simply the
+        existence of the key in the new data store. Your callback logic would
+        be: if the key exists in the new store, do nothing; otherwise, perform
+        the migration.
+      </li>
+      <li>
+        <strong>Adding a Marker Property (In-Place Migration):</strong> If you
+        are overwriting data in the <em>same</em> data store, you must add a
+        &quot;marker&quot; property to the data object itself, or to the data
+        store metadata (e.g., <code>isMigrated = true</code> or
+        <code>schemaVersion = 2</code>). Your callback logic must first check if
+        this property exists and has the correct value before proceeding.
+      </li>
+    </ul>
+  </li>
+</ol>
+<p>
+  By combining a live-path migration with a marker check in your batch callback,
+  you create an idempotent process that is safe to run on live experiences.
+</p>
+<h3 id="-9-2-specific-example-datastore2-migration-deletion-">
+  <strong>9.2. Specific Example: DataStore2 Migration + Deletion</strong>
+</h3>
+<p>
+  The tool can be used to perform data migration and cleanup for the
+  <strong>DataStore2 module</strong>, which uses the
+  <strong>&quot;Berezaa Method&quot;</strong> of storing data. An example
+  configuration and callback files are provided to meet this exact use case in
+  the <code>examples</code> folder in the tool.
+</p>
+<p>
+  <strong>Provided Files in <code>examples/</code></strong>
+</p>
+<ul>
+  <li>
+    <strong><code>ds2-config.json</code></strong
+    >: A set of configurations specifically tuned for a DataStore2 migration and
+    deletion batch process.
+  </li>
+  <li>
+    <strong><code>ds2-migrate.luau</code></strong
+    >: A callback script that migrates the latest version from the DataStore2
+    data store to the migrated data store
+  </li>
+  <li>
+    <strong><code>ds2-migrate-delete.luau</code></strong
+    >: A callback script that <strong>1)</strong> migrates the latest version
+    from the DataStore2 data store to the migrated data store, and
+    <strong>2)</strong> deletes <strong>all but the latest version</strong> from
+    the DataStore2 data store. We recommend using this script, since it will
+    enable rollbacks in emergencies.
+  </li>
+  <li>
+    <strong><code>ds2-migrate-delete-all.luau</code></strong
+    >: A callback script that <strong>1)</strong> migrates the latest version
+    from the DataStore2 data store to the migrated data store, and
+    <strong>2)</strong> deletes <strong>all data</strong> from the DataStore2
+    data store, including the Data Store resource. Use this script with caution.
+  </li>
+</ul>
+<p><strong>Prerequisites:</strong></p>
+<ol>
+  <li>
+    Integrate the <strong>DataStore2 Migration Tool</strong> into your
+    experience.
+  </li>
+  <li>
+    Ensure the &quot;Saving Method&quot; is
+    <code>MigrateOrderedBackups</code> (and set it if not).
+  </li>
+  <li>
+    Follow the testing instructions provided in the
+    <a
+      href="https://devforum.roblox.com/t/datastores-migration-packages-for-the-berezaa-method-and-datastore2-module-public-beta/3631514"
+      ><strong>Data Stores Migration Packages Dev Forum Post</strong></a
+    >.
+  </li>
+  <li>Publish the experience with these changes.</li>
+</ol>
+<p><strong>Execution Steps:</strong></p>
+<ol>
+  <li>Complete the setup in the <strong>Getting Started</strong> section.</li>
+  <li>
+    If you are using the <code>ds2-migrate-delete-all.luau</code> callback, see
+    <strong>Appendix E: Configuring Data Store Deletion Callback</strong> for
+    more specific setup instructions.
+  </li>
+  <li>
+    Update the provided <code>ds2-config.json</code> file with your preferred
+    callback (<code>ds2-migrate[-delete[-all]].luau</code>),
+    <code>universeId</code>, <code>placeId</code>, and the DataStore2 prefix.
+    The DataStore2 prefix is the name of the key / master key of your data
+    store, followed by a ‘/’. For example, if you have a master key called
+    <code>DATA</code>, then the prefix will be <code>DATA/</code>. We recommend
+    verifying you have the correct prefix by looking for data stores with the
+    pattern <code>&lt;prefix&gt;&lt;user id&gt;</code> in Data Stores Manager.
+  </li>
+  <li>
+    (Optional) If you are using a custom migration scope in the
+    <a
+      href="https://create.roblox.com/store/asset/82521207271039/BETA-DataStore2-Migration-Tool?keyword=datastore2&amp;pageNumber=1&amp;pagePosition=0"
+      ><strong>DataStore2 Migration Tool</strong></a
+    >, edit the chosen callback script and add the scope as the value of
+    <code>MIGRATED_DS_SCOPE</code>.
+  </li>
+  <li>
+    Run the <code>process-data-stores</code> command, e.g.<br /><code
+      >lune run batch-process process-data-stores DS2_Migration_June17 -c
+      examples/ds2-config.json</code
+    >
+  </li>
+</ol>
+<h3 id="-9-3-specific-example-generic-berezaa-method-migration-">
+  <strong>9.3. Specific Example: Generic Berezaa Method Migration</strong>
+</h3>
+<p>
+  If you have implemented the “Berezaa Method” with a custom implementation, it
+  is still viable to use this tool for data migration. Utilize the functions
+  available in the
+  <a
+    href="https://create.roblox.com/store/asset/100741523916104/BETA-Berezaa-Method-Data-Migration-Tool"
+    ><strong>Berezaa Method Data Migration Tool</strong></a
+  >
+  and adjust them to your use case.
+</p>
+<h2 id="-appendix-"><strong>Appendix</strong></h2>
+<h3 id="-appendix-a-api-key-permissions-">
+  <strong>Appendix A: API Key Permissions</strong>
+</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">API System</th>
+      <th style="text-align: left">Experience Operations</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left"><strong>luau-execution-sessions</strong></td>
+      <td style="text-align: left">write</td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>memory-stores</strong></td>
+      <td style="text-align: left">
+        memory-store.sorted-map read<br />memory-store.sorted-map write
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>ordered-data-stores</strong></td>
+      <td style="text-align: left">
+        universe.ordered-data-store.scope.entry:read
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>universe-datastores</strong></td>
+      <td style="text-align: left">
+        universe-datastores.objects:list<br />universe-datastores.objects:read<br />universe-datastores.objects:create<br />universe-datastores.control:create
+      </td>
+    </tr>
+  </tbody>
+</table>
+<h3 id="-appendix-b-configuration-glossary-">
+  <strong>Appendix B: Configuration Glossary</strong>
+</h3>
+<p><em>Table of all command-line options, grouped by category.</em></p>
+<h4 id="-tool-behavior-options-"><strong>Tool Behavior Options</strong></h4>
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Config Name</th>
+      <th style="text-align: left">Option</th>
+      <th style="text-align: left">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">config</td>
+      <td style="text-align: left"><code>-c</code>, <code>--config</code></td>
+      <td style="text-align: left">
+        Filepath to a JSON configuration file. Configurations in this file are
+        overridden by direct command-line options.
+      </td>
+    </tr>
+  </tbody>
+</table>
+<h4 id="-shared-required-configurations-">
+  <strong>Shared (Required) Configurations</strong>
+</h4>
+<p>
+  <em
+    >These configurations are required for all commands except resume (<code
+      >universeId</code
+    >
+    only). For resume, <code>numProcessingInstances</code> and
+    <code>outputDirectory</code> can both be changed, but are no longer
+    considered required.</em
+  >
+</p>
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Config Name</th>
+      <th style="text-align: left">Option</th>
+      <th style="text-align: left">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">callback</td>
+      <td style="text-align: left"><code>-C</code>, <code>--callback</code></td>
+      <td style="text-align: left">
+        Filepath to the Luau callback function to execute for each item.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">numProcessingInstances</td>
+      <td style="text-align: left">
+        <code>-i</code>, <code>--num-processing-instances</code>
+      </td>
+      <td style="text-align: left">
+        Number of Stage 2 processing sessions to run concurrently. Please note
+        that the batch process will only spin up as many concurrent sessions as
+        are available. So, if no sessions are running, the effective range of
+        this configuration is 1 - 9.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">outputDirectory</td>
+      <td style="text-align: left">
+        <code>-o</code>, <code>--output-directory</code>
+      </td>
+      <td style="text-align: left">
+        Directory where output files will be created.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">placeId</td>
+      <td style="text-align: left"><code>-p</code>, <code>--place-id</code></td>
+      <td style="text-align: left">
+        The Place ID of the place to execute the batch process on.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">universeId</td>
+      <td style="text-align: left">
+        <code>-u</code>, <code>--universe-id</code>
+      </td>
+      <td style="text-align: left">
+        The Universe ID of the experience to execute the batch process on.
+      </td>
+    </tr>
+  </tbody>
+</table>
+<h4 id="-shared-optional-configurations-">
+  <strong>Shared (Optional) Configurations</strong>
+</h4>
+<p>
+  <em
+    >These configurations can be used with both process-keys and
+    process-data-stores. They are optional to provide.</em
+  >
+</p>
+<p>
+  <em
+    >The default values are suitable for most simple migration or deletion
+    tasks. For more complex or performance-intensive operations, you should tune
+    these values. Either way, it is recommended to understand what each
+    configuration does before running a batch process.</em
+  >
+</p>
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Config Name</th>
+      <th style="text-align: left">Option</th>
+      <th style="text-align: left">Default</th>
+      <th style="text-align: left">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">errorLogMaxLength</td>
+      <td style="text-align: left"><code>--error-log-max-length</code></td>
+      <td style="text-align: left">50</td>
+      <td style="text-align: left">
+        Maximum character length of error logs to persist from failed items.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">jobQueueMaxSize</td>
+      <td style="text-align: left"><code>--job-queue-max-size</code></td>
+      <td style="text-align: left">20</td>
+      <td style="text-align: left">
+        Maximum number of jobs to hold in the queue at one time.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">maxItemsPerJob</td>
+      <td style="text-align: left"><code>--max-items-per-job</code></td>
+      <td style="text-align: left">50</td>
+      <td style="text-align: left">
+        Maximum number of items to process in one job. Note that if
+        <code>excludeDeletedKeys</code>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">maxTotalFailedItems</td>
+      <td style="text-align: left"><code>--max-total-failed-items</code></td>
+      <td style="text-align: left">100</td>
+      <td style="text-align: left">
+        Number of failed items that will cause the entire batch process to fail.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">memoryStoresExpiration</td>
+      <td style="text-align: left"><code>--memory-stores-expiration</code></td>
+      <td style="text-align: left">3888000</td>
+      <td style="text-align: left">
+        Expiration time in seconds for all memory store entries related to the
+        process.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">memoryStoresStorageLimit</td>
+      <td style="text-align: left">
+        <code>--memory-stores-storage-limit</code>
+      </td>
+      <td style="text-align: left">-1</td>
+      <td style="text-align: left">
+        Storage limit for memory stores (in kilobytes) (-1 for no limit).
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">numRetries</td>
+      <td style="text-align: left"><code>--num-retries</code></td>
+      <td style="text-align: left">4</td>
+      <td style="text-align: left">
+        Number of times to retry processing a single item before marking it as
+        failed.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">processItemRateLimit</td>
+      <td style="text-align: left"><code>--process-item-rate-limit</code></td>
+      <td style="text-align: left">50</td>
+      <td style="text-align: left">
+        Maximum number of items a single processing instance can process per
+        minute.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">progressRefreshTimeout</td>
+      <td style="text-align: left"><code>--progress-refresh-timeout</code></td>
+      <td style="text-align: left">5</td>
+      <td style="text-align: left">
+        Interval in seconds for the Stage 1 session to timeout between updating
+        the overall process state and listing jobs to the job queue.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">retryExponentialBackoff</td>
+      <td style="text-align: left"><code>--retry-exponential-backoff</code></td>
+      <td style="text-align: left">2</td>
+      <td style="text-align: left">
+        The multiplier for exponential backoff on retry timeouts. 1 for no
+        backoff.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">retryTimeoutBase</td>
+      <td style="text-align: left"><code>--retry-timeout-base</code></td>
+      <td style="text-align: left">0.5</td>
+      <td style="text-align: left">
+        The base timeout in seconds for retries.
+        <code>Total wait = base * (backoff ^ retry_attempt)</code>.
+      </td>
+    </tr>
+  </tbody>
+</table>
+<h4 id="-process-keys-specific-configurations-">
+  <strong><code>process-keys</code> Specific Configurations</strong>
+</h4>
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Config Name</th>
+      <th style="text-align: left">Option</th>
+      <th style="text-align: left">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">allScopes</td>
+      <td style="text-align: left"><code>--all-scopes</code> (flag)</td>
+      <td style="text-align: left">
+        Flag to scan all data stores scopes. If this flag is provided, the
+        <code>dataStoreScope</code> configuration is discarded.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">dataStoreName</td>
+      <td style="text-align: left">
+        <code>-d</code>, <code>--data-store-name</code>
+      </td>
+      <td style="text-align: left">Name of the data store to scan.</td>
+    </tr>
+    <tr>
+      <td style="text-align: left">dataStoreScope</td>
+      <td style="text-align: left">
+        <code>-s</code>, <code>--data-store-scope</code>
+      </td>
+      <td style="text-align: left">
+        Scope of the keys to scan. If not provided, defaults to global scope.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">keyPrefix</td>
+      <td style="text-align: left">
+        <code>-P</code>, <code>--key-prefix</code>
+      </td>
+      <td style="text-align: left">
+        Prefix of keys to include in the scan. If not provided, all keys are
+        scanned.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">excludeDeletedKeys</td>
+      <td style="text-align: left">
+        <code>--exclude-deleted-keys</code> /
+        <code>--include-deleted-keys</code> (flags)
+      </td>
+      <td style="text-align: left">
+        Flag to include or exclude deleted keys from the scan. Defaults to false
+        (deleted keys are included).
+      </td>
+    </tr>
+  </tbody>
+</table>
+<h4 id="-process-data-stores-specific-configurations-">
+  <strong><code>process-data-stores</code> Specific Configurations</strong>
+</h4>
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Config Name</th>
+      <th style="text-align: left">Option</th>
+      <th style="text-align: left">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left">dataStorePrefix</td>
+      <td style="text-align: left">
+        <code>-P</code>, <code>--data-store-prefix</code>
+      </td>
+      <td style="text-align: left">
+        Prefix of data stores to include in the scan.
+      </td>
+    </tr>
+  </tbody>
+</table>
+<h3 id="-appendix-c-custom-callback-function-">
+  <strong>Appendix C: Custom Callback Function</strong>
+</h3>
+<p>
+  To execute a batch process, you must provide a filepath to a Luau file
+  containing your custom callback function. This file must meet the following
+  requirements:
+</p>
+<ol>
+  <li>It must contain valid, compilable Luau code.</li>
+  <li>
+    It must return a single function that accepts one parameter: the item name
+    (which will be a key name or a data store name, depending on the command).
+  </li>
+</ol>
+<p>We recommend the following format for your callback function:</p>
+<pre><code class="lang-luau"><span class="hljs-comment">-- Define Services + Other Global Variables</span>
+<span class="hljs-keyword">local</span> DataStoreService = game:GetService(<span class="hljs-string">"DataStoreService"</span>)
+<span class="hljs-keyword">local</span> MY_CONSTANT = <span class="hljs-number">100</span>
+...
+
+<span class="hljs-comment">-- Define helper functions</span>
+<span class="hljs-keyword">local</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">migrateHelper</span><span class="hljs-params">(item)</span></span>
+    ...
+<span class="hljs-keyword">end</span>
+...
+
+
+<span class="hljs-comment">----------- EITHER -----------</span>
+
+<span class="hljs-keyword">return</span> <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(item)</span></span>
+    ...
+    migrateHelper(item)
+    ...
+<span class="hljs-keyword">end</span>
+
+<span class="hljs-comment">------------- OR -------------</span>
+
+<span class="hljs-keyword">local</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span><span class="hljs-params">(item)</span></span>
+    ...
+    migrateHelper(item)
+    ...
+<span class="hljs-keyword">end</span>
+
+<span class="hljs-keyword">return</span> callback
+</code></pre>
+<p>
+  The callback will be validated for syntax errors on the command line prior to
+  starting your batch process. It is ultimately up to you to ensure the callback
+  operates as intended.
+</p>
+<p>
+  This callback runs inside a <code>LuauExecutionSessionTask</code> within your
+  experience&#39;s context, allowing you to use <code>require()</code> on
+  ModuleScript instances from your place’s DataModel.
+</p>
+<p><strong>Example 1: Basic Migration</strong></p>
+<pre><code class="lang-luau"><span class="hljs-comment">-- example-migrate-callback.luau</span>
+<span class="hljs-built_in">local</span> DataStoreService = game:GetService(<span class="hljs-string">"DataStoreService"</span>)
+<span class="hljs-built_in">local</span> sourceDataStore = DataStoreService:GetDataStore(<span class="hljs-string">"source"</span>)
+<span class="hljs-built_in">local</span> destinationDataStore = DataStoreService:GetDataStore(<span class="hljs-string">"destination"</span>)
+
+<span class="hljs-built_in">local</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">migrateValue</span>(<span class="hljs-title">value</span>)</span>
+    <span class="hljs-built_in">local</span> migratedValue = <span class="hljs-built_in">value</span>
+    ...
+    <span class="hljs-comment">-- &lt;INSERT MIGRATION LOGIC HERE&gt;</span>
+    ...
+    <span class="hljs-literal">return</span> migratedValue
+<span class="hljs-function"><span class="hljs-keyword">end</span>
+
+<span class="hljs-title">return</span> <span class="hljs-title">function</span>(<span class="hljs-title">item</span>)</span>
+    <span class="hljs-built_in">local</span> <span class="hljs-built_in">value</span> = sourceDataStore:GetAsync(<span class="hljs-keyword">item</span>)
+    <span class="hljs-built_in">local</span> migratedValue = migrateValue(<span class="hljs-built_in">value</span>)
+    destinationDataStore:SetAsync(<span class="hljs-keyword">item</span>, migratedValue)
+<span class="hljs-keyword">end</span>
+</code></pre>
+<p><strong>Example 2: Using a ModuleScript from your Place</strong></p>
+<pre><code class="lang-luau"><span class="hljs-comment">-- example-migrate-callback-with-module-script.luau</span>
+<span class="hljs-built_in">local</span> MigrationScript = <span class="hljs-built_in">require</span>(game.ServerScriptService.MigrationScript)
+
+<span class="hljs-literal">return</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-title">item</span>)</span>
+    MigrationScript.MigrateItem(<span class="hljs-keyword">item</span>)
+<span class="hljs-keyword">end</span>
+</code></pre>
+<p><strong>Example 3: Basic Deletion</strong></p>
+<pre><code class="lang-luau"><span class="hljs-comment">-- example-delete-callback.luau</span>
+<span class="hljs-built_in">local</span> DataStoreService = game:GetService(<span class="hljs-string">"DataStoreService"</span>)
+<span class="hljs-built_in">local</span> dataStoreToDelete = DataStoreService:GetDataStore(<span class="hljs-string">"&lt;INSERT DATA STORE NAME&gt;"</span>, <span class="hljs-string">"&lt;INSERT DATA STORE SCOPE&gt;"</span>)
+
+<span class="hljs-literal">return</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-title">item</span>)</span>
+    dataStoreToDelete:RemoveAsync(<span class="hljs-keyword">item</span>)
+<span class="hljs-keyword">end</span>
+</code></pre>
+<p><strong>Example 4: Invalid Callback Function (Bad Luau Code)</strong></p>
+<pre><code class="lang-luau"><span class="hljs-comment">-- example-bad-luau-code.luau</span>
+<span class="hljs-built_in">local</span> DataStoreService = game:GetService(<span class="hljs-string">"DataStoreService"</span>)
+<span class="hljs-built_in">local</span> sourceDataStore = DataStoreService:GetDataStore(<span class="hljs-string">"source"</span>)
+<span class="hljs-built_in">local</span> destinationDataStore = DataStoreService:GetDataStore(<span class="hljs-string">"destination"</span>)
+
+<span class="hljs-built_in">local</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">migrateValue</span>(<span class="hljs-title">value</span>)</span>
+    <span class="hljs-built_in">local</span> migratedValue = <span class="hljs-built_in">value</span>
+    ...
+    <span class="hljs-comment">-- &lt;INSERT MIGRATION LOGIC HERE&gt;</span>
+    ...
+    <span class="hljs-literal">return</span> migratedValue
+<span class="hljs-function"><span class="hljs-keyword">end</span>
+
+<span class="hljs-title">return</span> <span class="hljs-title">function</span>(<span class="hljs-title">item</span>)</span>
+    <span class="hljs-built_in">local</span> <span class="hljs-built_in">value</span> = sourceDataStore:GetAsync(<span class="hljs-keyword">item</span>)
+    <span class="hljs-built_in">local</span> migratedValue = migrateValue(<span class="hljs-built_in">value</span>)
+    destinationDataStore:SetAsync(<span class="hljs-keyword">item</span>, migratedValue)
+
+<span class="hljs-comment">-- syntax error - function is missing 'end' to close</span>
+</code></pre>
+<p>
+  <strong>Example 5: Invalid Callback Function (No Function Returned)</strong>
+</p>
+<pre><code class="lang-luau"><span class="hljs-comment">--example-no-function-returned.luau</span>
+<span class="hljs-keyword">local</span> DataStoreService = game:GetService(<span class="hljs-string">"DataStoreService"</span>)
+<span class="hljs-keyword">local</span> sourceDataStore = DataStoreService:GetDataStore(<span class="hljs-string">"source"</span>)
+<span class="hljs-keyword">local</span> destinationDataStore = DataStoreService:GetDataStore(<span class="hljs-string">"destination"</span>)
+
+<span class="hljs-keyword">local</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">migrateValue</span><span class="hljs-params">(value)</span></span>
+    <span class="hljs-keyword">local</span> migratedValue = value
+    ...
+    <span class="hljs-comment">-- &lt;INSERT MIGRATION LOGIC HERE&gt;</span>
+    ...
+    <span class="hljs-keyword">return</span> migratedValue
+<span class="hljs-keyword">end</span>
+
+<span class="hljs-keyword">local</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">callback</span><span class="hljs-params">(item)</span></span>
+    <span class="hljs-keyword">local</span> value = sourceDataStore:GetAsync(item)
+    <span class="hljs-keyword">local</span> migratedValue = migrateValue(value)
+    destinationDataStore:SetAsync(item, migratedValue)
+<span class="hljs-keyword">end</span>
+
+<span class="hljs-comment">-- 'callback' is never returned - 'return callback' would make this valid</span>
+</code></pre>
+<p>
+  The callback function will have the following predictable logging behavior:
+</p>
+<ul>
+  <li>
+    Any <code>print()</code> statements in your callback will appear in the
+    session logs.
+  </li>
+  <li>
+    When an error is thrown within the callback, it will trigger the retry
+    logic. If all retries are exhausted:
+    <ul>
+      <li>
+        The truncated error will attempt to be logged to
+        <code>failed_items.output</code> file for quick reference.
+      </li>
+      <li>The complete error will be logged to the full session logs.</li>
+    </ul>
+  </li>
+</ul>
+<p>
+  Remember that your callback will be called on each item individually, and runs
+  independently of other items in the same batch or different batches.
+</p>
+<h3 id="-appendix-d-reserved-memory-stores-data-stores-names-">
+  <strong>Appendix D: Reserved Memory Stores / Data Stores Names</strong>
+</h3>
+<p>
+  The batch processor will utilize the following memory stores / data stores
+  resources:
+</p>
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: left">Resource Type</th>
+      <th style="text-align: left">Resource Names</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: left"><strong>MemoryStoreSortedMap</strong></td>
+      <td style="text-align: left">
+        <code>_RBX_batch-processes</code><br /><code
+          >_RBX_batch-process-storage-pool</code
+        ><br /><code>_RBX_batch-process-task-status</code><br /><code
+          >_RBX_batch-process-guid-to-session-paths</code
+        ><br /><code>_RBX_batch-process-api-key-validation</code><br /><code
+          >_RBX_batch-process-pages-&lt;process name&gt;</code
+        ><br /><code
+          >_RBX_batch-process-failed-item-logs-&lt;process name&gt;</code
+        >
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>MemoryStoreQueue</strong></td>
+      <td style="text-align: left">
+        <code>_RBX_batch-process-job-queue-&lt;process name&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>OrderedDataStore</strong></td>
+      <td style="text-align: left">
+        <code>_RBX_batch-process-failed-items-&lt;process name&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left"><strong>DataStore</strong></td>
+      <td style="text-align: left">
+        <code>_RBX_batch-processes</code><br /><code
+          >_RBX_batch-process-api-key-validation</code
+        >
+      </td>
+    </tr>
+  </tbody>
+</table>
+<p>
+  <strong
+    >Please do not write to these resources from outside of the batch
+    processor</strong
+  >. Doing so may break the batch processor.
+</p>
+<h3 id="-appendix-e-configuring-data-store-deletion-callback-">
+  <strong>Appendix E: Configuring Data Store Deletion Callback</strong>
+</h3>
+<p>
+  To use the <code>ds2-migrate-delete-all.luau</code> callback, we must
+  configure the Universe ID within the callback, and store our API key in a
+  secret.
+</p>
+<ol>
+  <li>
+    In the <code>ds2-migrate-delete-all.luau</code> file, manually add your
+    Universe ID as the value of <code>UNIVERSE_ID</code> on
+    <strong>Line 11</strong>.
+  </li>
+  <li>
+    Create a new Open Cloud API Key, and add the permission
+    <code>universe-datastores.control:delete</code> to it for your experience.
+  </li>
+  <li>
+    Add a secret called <code>DS_DELETION_API_KEY</code> to
+    <a href="https://create.roblox.com/docs/cloud-services/secrets"
+      >Secrets Store</a
+    >, with this API Key as your value.
+  </li>
+</ol>
+<h3 id="-appendix-f-tips-and-tricks-">
+  <strong>Appendix F: Tips and Tricks</strong>
+</h3>
+<ul>
+  <li>
+    <strong>Use a High-Uptime Environment</strong>: Because the CLI must remain
+    running for the entire duration of a batch process, it is highly recommended
+    to run the tool on a machine with a stable internet connection and high
+    uptime, such as a Virtual Private Server (VPS), rather than a personal
+    laptop that may go to sleep or lose connectivity.
+  </li>
+  <li>
+    <strong>Securely Manage API Keys</strong>: Your Open Cloud API Key is a
+    powerful secret that provides direct access to your experience&#39;s data.
+    It is critical to protect it.
+    <ul>
+      <li>
+        We strongly advise using a dedicated secret management solution, such as
+        the
+        <a href="https://developer.1password.com/docs/cli/get-started/"
+          >1Password CLI</a
+        >, to inject your API key into the environment. This prevents the key
+        from being saved in plain text.
+      </li>
+      <li>
+        If you do set the key manually (e.g., <code>export API_KEY=...</code>),
+        be aware that this command may be saved to your shell&#39;s history file
+        (like <code>.bash_history</code> or <code>.zsh_history</code>). To
+        prevent accidental leaks, we recommend clearing your shell history after
+        your session is complete.
+      </li>
+      <li>
+        When debugging session logs by calling Open Cloud endpoints, you must
+        include your API key in the request header. To avoid pasting your key
+        directly into browser-based API tools, consider using a browser
+        extension (like ModHeader) to securely inject the
+        <code>x-api-key</code> header into your requests.
+      </li>
+    </ul>
+  </li>
+</ul>
+<h3 id="-appendix-g-resources-"><strong>Appendix G: Resources</strong></h3>
+<ul>
+  <li>
+    <p><a href="https://kampfkarren.github.io/Roblox/">DataStore2 Module</a></p>
+  </li>
+  <li>
+    <p>
+      <a href="https://create.roblox.com/docs/cloud-services/data-stores"
+        >Data Stores Documentation</a
+      >
+    </p>
+    <ul>
+      <li>
+        <a
+          href="https://create.roblox.com/docs/cloud-services/data-stores/error-codes-and-limits#limits"
+          >Data Stores Limits</a
+        >
+      </li>
+      <li>
+        <a
+          href="https://create.roblox.com/docs/cloud-services/data-stores/data-stores-manager"
+          >Data Stores Manager</a
+        >
+      </li>
+      <li>
+        <a
+          href="https://create.roblox.com/docs/cloud-services/data-stores/observability"
+          >Data Stores Observability Dashboard</a
+        >
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>
+      <a
+        href="https://devforum.roblox.com/t/datastores-migration-packages-for-the-berezaa-method-and-datastore2-module-public-beta/3631514"
+        >Data Stores Migration Packages - Dev Forum</a
+      >
+    </p>
+    <ul>
+      <li>
+        <a
+          href="https://create.roblox.com/store/asset/82521207271039/BETA-DataStore2-Migration-Tool?keyword=datastore2&amp;pageNumber=1&amp;pagePosition=0"
+          >[BETA] DataStore2 Migration Tool</a
+        >
+      </li>
+      <li>
+        <a
+          href="https://create.roblox.com/store/asset/100741523916104/BETA-Berezaa-Method-Data-Migration-Tool"
+          >[BETA] Berezaa Method Data Migration Tool</a
+        >
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p><a href="https://lune-org.github.io/docs">Lune Documentation</a></p>
+    <ul>
+      <li>
+        <a href="https://lune-org.github.io/docs/getting-started/1-installation"
+          >Installation</a
+        >
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>
+      <a href="https://create.roblox.com/docs/cloud-services/memory-stores"
+        >Memory Stores Documentation</a
+      >
+    </p>
+    <ul>
+      <li>
+        <a
+          href="https://create.roblox.com/docs/cloud-services/memory-stores#limits-and-quotas"
+          >Memory Stores Limits</a
+        >
+      </li>
+      <li>
+        <a
+          href="https://create.roblox.com/docs/cloud-services/memory-stores/observability"
+          >Memory Stores Observability Dashboard</a
+        >
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>
+      <a
+        href="https://devforum.roblox.com/t/beta-open-cloud-engine-api-for-executing-luau/3172185"
+        >Open Cloud Engine API for Luau Execution - Dev Forum</a
+      >
+    </p>
+  </li>
+  <li>
+    <p>
+      <a
+        href="https://create.roblox.com/dashboard/credentials?id=6680476435&amp;activeTab=ApiKeysTab"
+        >Roblox Creator Hub - API Keys</a
+      >
+    </p>
+  </li>
+  <li>
+    <p>
+      <a href="https://create.roblox.com/docs/cloud"
+        >Roblox Open Cloud API Documentation</a
+      >
+    </p>
+    <ul>
+      <li>
+        <a
+          href="https://create.roblox.com/docs/cloud/reference/LuauExecutionSessionTask"
+          >LuauExecutionSessionTasks</a
+        >
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>
+      <a href="https://create.roblox.com/docs/cloud-services/secrets"
+        >Secrets Store</a
+      >
+    </p>
+  </li>
+</ul>

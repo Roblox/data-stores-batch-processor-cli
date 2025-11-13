@@ -1,0 +1,27 @@
+{
+  "universeId": -1,
+  "placeId": -1,
+  "callback": "",
+  "outputDirectory": "",
+  "numProcessingInstances": -1,
+
+  "dataStoreName": "",
+  "dataStoreScope": "",
+  "allScopes": false,
+  "keyPrefix": "",
+  "excludeDeletedKeys": false,
+
+  "dataStorePrefix": "",
+
+  "processItemRateLimit": 50,
+  "numRetries": 4,
+  "retryTimeoutBase": 0.5,
+  "retryExponentialBackoff": 2,
+  "maxTotalFailedItems": 100,
+  "maxItemsPerJob": 50,
+  "jobQueueMaxSize": 20,
+  "errorLogMaxLength": 50,
+  "progressRefreshTimeout": 5,
+  "memoryStoresExpiration": 3888000,
+  "memoryStoresStorageLimit": -1
+}
