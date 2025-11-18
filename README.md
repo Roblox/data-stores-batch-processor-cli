@@ -119,7 +119,8 @@ lune run batch-process process-keys <process-name> --config <filepath>
 
 **Arguments:**
 
-- **`<process-name>`**: The unique name of the new batch process.
+- **`<process-name>`**: The unique name of the new batch process. The process name can be
+  at most 18 characters long.
 
 **Command-Specific Options:**
 
@@ -147,7 +148,8 @@ lune run batch-process process-data-stores <process-name> --config <filepath>
 
 **Arguments:**
 
-- **`<process-name>`** : The unique name of the new batch process.
+- **`<process-name>`** : The unique name of the new batch process. The process name can be
+  at most 18 characters long.
 
 **Command-Specific Options:**
 
@@ -379,7 +381,7 @@ end
 
 2. **Create the Configuration File** (or provide arguments on the command line)
 3. **Run the `process-keys` command to kick off the deletion:** e.g.  
-   `lune run batch-process process-keys DS_DELETION_JUNE17 -c <config filepath>.json`
+   `lune run batch-process process-keys DS_Deletion -c <config filepath>.json`
 
 On a related note, bulk Data Store deletion can be achieved by integrating the Deletion API with the batch processor. Please take caution that you are only deleting data stores that you are no longer
 using.
@@ -416,7 +418,7 @@ end
 
 2. **Create the Configuration File** (or provide arguments on the command line)
 3. **Run the `process-data-stores` command to kick off the deletion:** e.g.  
-   `lune run batch-process process-data-stores DS_DELETION_JUNE17 -c <config filepath>.json`
+   `lune run batch-process process-data-stores DS_Deletion -c <config filepath>.json`
 
 ## **9\. Example Use Case: Data Migrations**
 
@@ -459,7 +461,7 @@ to meet this exact use case in the `examples` folder in the tool.
 3. Update the provided `ds2-config.json` file with your preferred callback (`ds2-migrate[-delete[-all]].luau`), `universeId`, `placeId`, and the DataStore2 prefix. The DataStore2 prefix is the name of the key / master key of your data store, followed by a ‘/’. For example, if you have a master key called `DATA`, then the prefix will be `DATA/`. We recommend verifying you have the correct prefix by looking for data stores with the pattern `<prefix><user id>` in Data Stores Manager.
 4. (Optional) If you are using a custom migration scope in the [**DataStore2 Migration Tool**](https://create.roblox.com/store/asset/82521207271039/BETA-DataStore2-Migration-Tool?keyword=datastore2&pageNumber=1&pagePosition=0), edit the chosen callback script and add the scope as the value of `MIGRATED_DS_SCOPE`.
 5. Run the `process-data-stores` command, e.g.  
-   `lune run batch-process process-data-stores DS2_Migration_June17 -c examples/ds2-config.json`
+   `lune run batch-process process-data-stores DS2_Migration -c examples/ds2-config.json`
 
 ### **9.3. Specific Example: Generic Berezaa Method Migration**
 

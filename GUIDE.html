@@ -34,7 +34,8 @@
   repository and stage a pull request with your contributions. Please see the
   <strong><a href="./LICENSE">LICENSE</a></strong> for details. This tool uses
   third-party modules; their licenses are listed in
-  <strong><a href="./ATTRIBUTIONS.md">ATTRIBUTIONS.md</a>.</strong>
+  <strong><a href="./ATTRIBUTIONS.md">ATTRIBUTIONS.md</a></strong
+  >.
 </p>
 <h2 id="-1-overview-"><strong>1. Overview</strong></h2>
 <p>
@@ -289,7 +290,8 @@ lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-buil
 <ul>
   <li>
     <strong><code>&lt;process-name&gt;</code></strong
-    >: The unique name of the new batch process.
+    >: The unique name of the new batch process. The process name can be at most
+    18 characters long.
   </li>
 </ul>
 <p><strong>Command-Specific Options:</strong></p>
@@ -335,7 +337,7 @@ lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-buil
 <ul>
   <li>
     <strong><code>&lt;process-name&gt;</code></strong> : The unique name of the
-    new batch process.
+    new batch process. The process name can be at most 18 characters long.
   </li>
 </ul>
 <p><strong>Command-Specific Options:</strong></p>
@@ -820,7 +822,7 @@ lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-buil
       deletion:</strong
     >
     e.g.<br /><code
-      >lune run batch-process process-keys DS_DELETION_JUNE17 -c &lt;config
+      >lune run batch-process process-keys DS_Deletion -c &lt;config
       filepath&gt;.json</code
     >
   </li>
@@ -873,8 +875,8 @@ end</span>
       deletion:</strong
     >
     e.g.<br /><code
-      >lune run batch-process process-data-stores DS_DELETION_JUNE17 -c
-      &lt;config filepath&gt;.json</code
+      >lune run batch-process process-data-stores DS_Deletion -c &lt;config
+      filepath&gt;.json</code
     >
   </li>
 </ol>
@@ -1019,7 +1021,7 @@ end</span>
   </li>
   <li>
     Run the <code>process-data-stores</code> command, e.g.<br /><code
-      >lune run batch-process process-data-stores DS2_Migration_June17 -c
+      >lune run batch-process process-data-stores DS2_Migration -c
       examples/ds2-config.json</code
     >
   </li>
@@ -1213,8 +1215,7 @@ end</span>
       <td style="text-align: left"><code>--max-items-per-job</code></td>
       <td style="text-align: left">50</td>
       <td style="text-align: left">
-        Maximum number of items to process in one job. Note that if
-        <code>excludeDeletedKeys</code>
+        Maximum number of items to process in one job.
       </td>
     </tr>
     <tr>
