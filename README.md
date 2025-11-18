@@ -119,7 +119,8 @@ lune run batch-process process-keys <process-name> --config <filepath>
 
 **Arguments:**
 
-- **`<process-name>`**: The unique name of the new batch process.
+- **`<process-name>`**: The unique name of the new batch process. The process name can be
+  at most 18 characters long.
 
 **Command-Specific Options:**
 
@@ -147,7 +148,8 @@ lune run batch-process process-data-stores <process-name> --config <filepath>
 
 **Arguments:**
 
-- **`<process-name>`** : The unique name of the new batch process.
+- **`<process-name>`** : The unique name of the new batch process. The process name can be
+  at most 18 characters long.
 
 **Command-Specific Options:**
 
