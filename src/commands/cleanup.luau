@@ -13,6 +13,7 @@ local llc_tasks = require('../../libs/llc_tasks/tasks')
 
 -- Local Libraries
 local CLIO = require('../util/clio')
+local ConfigLoader = require('../config/loader')
 local ConfigValidators = require('../config/validators')
 local Constants = require('../shared/constants')
 local FileIO = require('../util/fileio')
@@ -148,12 +149,19 @@ Cleanup.Execute = function(processName: string, configs: Types.CleanupConfigs): 
         CLIO.Error("Process " .. processName .. " does not exist.")
     end
 
+    -- Combine the provided rate limits with the stored process configs
+    local combinedConfigs = ConfigLoader.CombineConfigs(
+        configs,
+        processInfo.configs,
+        Constants.DataStoresRateLimitConfigs
+    ) :: Types.AnyConfigs
+
     -- Wait until all sessions are completed
-    ProcessUtil.StopSessionTasks(processName, openCloudClient, processInfo.configs)
+    ProcessUtil.StopSessionTasks(processName, openCloudClient, combinedConfigs)
     ProcessUtil.WaitForSessionsToComplete(processName, openCloudClient)
 
     -- Run the cleanup task
-    cleanupBatchProcess(processName, processInfo.configs, openCloudClient)
+    cleanupBatchProcess(processName, combinedConfigs, openCloudClient)
 
     -- Cleanup complete
     CLIO.Print("Cleanup complete!")

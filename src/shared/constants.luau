@@ -26,6 +26,20 @@ local SessionLogsDirectory = "session_logs" -- The directory that contains the s
 local TableColumnWidth = 23 -- The number of spaces in each column of the table
 
 --[[
+    Per-server data store rate limit configs, applied in every cloud script.
+]]
+local DataStoresRateLimitConfigs: { string } = {
+    "standardReadRateLimit",
+    "standardWriteRateLimit",
+    "standardListRateLimit",
+    "standardRemoveRateLimit",
+    "orderedReadRateLimit",
+    "orderedWriteRateLimit",
+    "orderedListRateLimit",
+    "orderedRemoveRateLimit"
+}
+
+--[[
     Command type mappings.
     Maps command names to their string identifiers.
 ]]
@@ -158,6 +172,51 @@ local ConfigurationOptions: { [string]: Types.ConfigOption } = {
         description = "Base timeout for retries (in seconds) (choose 0 for no timeout)",
         default = 0.5
     },
+    standardReadRateLimit = {
+        option = "standard-read-rate-limit",
+        description = "Base rate limit (requests per minute) for standard data store read requests",
+        default = 10000
+    },
+    standardWriteRateLimit = {
+        option = "standard-write-rate-limit",
+        description = "Base rate limit (requests per minute) for standard data store write requests",
+        default = 10000
+    },
+    standardListRateLimit = {
+        option = "standard-list-rate-limit",
+        description = "Base rate limit (requests per minute) for standard data store list requests",
+        default = 10000
+    },
+    standardRemoveRateLimit = {
+        option = "standard-remove-rate-limit",
+        description = "Base rate limit (requests per minute) for standard data store remove requests",
+        default = 10000
+    },
+    orderedReadRateLimit = {
+        option = "ordered-read-rate-limit",
+        description = "Base rate limit (requests per minute) for ordered data store read requests",
+        default = 10000
+    },
+    orderedWriteRateLimit = {
+        option = "ordered-write-rate-limit",
+        description = "Base rate limit (requests per minute) for ordered data store write requests",
+        default = 10000
+    },
+    orderedListRateLimit = {
+        option = "ordered-list-rate-limit",
+        description = "Base rate limit (requests per minute) for ordered data store list requests",
+        default = 10000
+    },
+    orderedRemoveRateLimit = {
+        option = "ordered-remove-rate-limit",
+        description = "Base rate limit (requests per minute) for ordered data store remove requests",
+        default = 10000
+    },
+    processAutoFailureTimeout = {
+        option = "process-auto-failure-timeout",
+        description = "Time (in seconds) before a stuck process is automatically failed (minimum 600)",
+        default = 600
+    },
 
     -- Scan keys options
     dataStoreName = {
@@ -238,7 +297,16 @@ local CommandDetails: { [string]: { [string]: any } } = {
             "errorLogMaxLength",
             "progressRefreshTimeout",
             "memoryStoresExpiration",
-            "memoryStoresStorageLimit"
+            "memoryStoresStorageLimit",
+            "processAutoFailureTimeout",
+            "standardReadRateLimit",
+            "standardWriteRateLimit",
+            "standardListRateLimit",
+            "standardRemoveRateLimit",
+            "orderedReadRateLimit",
+            "orderedWriteRateLimit",
+            "orderedListRateLimit",
+            "orderedRemoveRateLimit"
         }
     },
     [Commands.ProcessDataStores] = {
@@ -263,7 +331,16 @@ local CommandDetails: { [string]: { [string]: any } } = {
             "errorLogMaxLength",
             "progressRefreshTimeout",
             "memoryStoresExpiration",
-            "memoryStoresStorageLimit"
+            "memoryStoresStorageLimit",
+            "processAutoFailureTimeout",
+            "standardReadRateLimit",
+            "standardWriteRateLimit",
+            "standardListRateLimit",
+            "standardRemoveRateLimit",
+            "orderedReadRateLimit",
+            "orderedWriteRateLimit",
+            "orderedListRateLimit",
+            "orderedRemoveRateLimit"
         }
     },
     [Commands.Resume] = {
@@ -284,7 +361,16 @@ local CommandDetails: { [string]: { [string]: any } } = {
             "errorLogMaxLength",
             "progressRefreshTimeout",
             "memoryStoresExpiration",
-            "memoryStoresStorageLimit"
+            "memoryStoresStorageLimit",
+            "processAutoFailureTimeout",
+            "standardReadRateLimit",
+            "standardWriteRateLimit",
+            "standardListRateLimit",
+            "standardRemoveRateLimit",
+            "orderedReadRateLimit",
+            "orderedWriteRateLimit",
+            "orderedListRateLimit",
+            "orderedRemoveRateLimit"
         }
     },
     [Commands.Cleanup] = {
@@ -293,7 +379,15 @@ local CommandDetails: { [string]: { [string]: any } } = {
             { name = "processName", description = "The name of the process to cleanup" }
         },
         configurations = {
-            "universeId"
+            "universeId",
+            "standardReadRateLimit",
+            "standardWriteRateLimit",
+            "standardListRateLimit",
+            "standardRemoveRateLimit",
+            "orderedReadRateLimit",
+            "orderedWriteRateLimit",
+            "orderedListRateLimit",
+            "orderedRemoveRateLimit"
         }
     },
     [Commands.List] = {
@@ -320,6 +414,7 @@ return {
     CompletedStage2TasksFile = CompletedStage2TasksFile,
     ConfigurationFlags = ConfigurationFlags,
     ConfigurationOptions = ConfigurationOptions,
+    DataStoresRateLimitConfigs = DataStoresRateLimitConfigs,
     FailedItemsFile = FailedItemsFile,
     GuidToSessionPathsMapExpiration = GuidToSessionPathsMapExpiration,
     PlaceHolder = PlaceHolder,

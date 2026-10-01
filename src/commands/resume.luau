@@ -9,6 +9,7 @@ local process = require('@lune/process')
 
 -- Local Libraries
 local CLIO = require('../util/clio')
+local ConfigLoader = require('../config/loader')
 local ConfigValidators = require('../config/validators')
 local Constants = require('../shared/constants')
 local FileIO = require('../util/fileio')
@@ -19,24 +20,6 @@ local Types = require('../shared/types')
 
 -- Resume
 local Resume = {}
-
---[[
-    Combines the old configs with the new configs
-    @param configs Types.ResumeConfigs - The new configs
-    @param pastConfigs Types.AnyConfigs - The old configs
-    @return Types.AnyConfigs - The combined configs
-]]
-local function combineConfigs(configs: Types.ResumeConfigs, pastConfigs: Types.AnyConfigs): Types.AnyConfigs
-    local combinedConfigs = {}
-    for configName, configValue in pairs(pastConfigs) do
-        if configs[configName] ~= Constants.PlaceHolder and configs[configName] ~= nil then
-            combinedConfigs[configName] = configs[configName]
-        else
-            combinedConfigs[configName] = configValue
-        end
-    end
-    return combinedConfigs :: Types.AnyConfigs
-end
 
 --[[
     Updates the process task status with the new number of instances
@@ -119,7 +102,11 @@ Resume.Execute = function(processName: string, configs: Types.ResumeConfigs): ()
     end
 
     -- Combine the old configs with the new configs
-    local combinedConfigs = combineConfigs(configs, processInfo.configs)
+    local combinedConfigs = ConfigLoader.CombineConfigs(
+        configs,
+        processInfo.configs,
+        Constants.CommandDetails[Constants.Commands.Resume].configurations
+    ) :: Types.AnyConfigs
 
     -- Validate the memoryStoresStorageLimit
     local validateMemoryStoresStorageLimitSuccess: boolean, validateMemoryStoresStorageLimitErrorMessage: string? = ConfigValidators.ValidateMemoryStoresStorageLimitBounds(combinedConfigs)
@@ -144,6 +131,7 @@ Resume.Execute = function(processName: string, configs: Types.ResumeConfigs): ()
 
     -- Prompt to resume the process
     CLIO.PrintMemoryStoresUsageInformation(combinedConfigs)
+    CLIO.PrintDataStoresRateLimitWarning()
     CLIO.ShowProcessWidth()
     CLIO.PromptForConfirmation("resume the process")
     CLIO.PrintDirectionToCLILogFile(processName, combinedConfigs.outputDirectory)

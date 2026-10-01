@@ -23,5 +23,14 @@
   "errorLogMaxLength": 50,
   "progressRefreshTimeout": 5,
   "memoryStoresExpiration": 3888000,
-  "memoryStoresStorageLimit": -1
+  "memoryStoresStorageLimit": -1,
+  "processAutoFailureTimeout": 600,
+  "standardReadRateLimit": 10000,
+  "standardWriteRateLimit": 10000,
+  "standardListRateLimit": 10000,
+  "standardRemoveRateLimit": 10000,
+  "orderedReadRateLimit": 10000,
+  "orderedWriteRateLimit": 10000,
+  "orderedListRateLimit": 10000,
+  "orderedRemoveRateLimit": 10000
 }

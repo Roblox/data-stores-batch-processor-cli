@@ -209,6 +209,18 @@ CLIO.PrintMemoryStoresUsageInformation = function(configs: Types.ConfigValues): 
 end
 
 --[[
+    Prints a warning about data stores per-server rate limits and experience-level limits.
+]]
+CLIO.PrintDataStoresRateLimitWarning = function(): ()
+    printSpacing()
+    print("Please note that the configured per-server data store rate limits (e.g. standardReadRateLimit, orderedWriteRateLimit) apply only to individual servers.\n"
+    .. "\tThey do not raise your experience-level Data Stores limits.\n\n"
+    .. "\tPlease ensure that the total request rate across all batch process instances will not exhaust your experience-level Data Stores limits.\n"
+    .. "\tSee https://create.roblox.com/docs/cloud-services/data-stores/error-codes-and-limits for details.\n")
+    lastProgressLine = false
+end
+
+--[[
     Prints a message directing the user to the CLI log file for debugging.
     @param processName string - The name of the process
     @param outputDirectory string - The output directory
