@@ -33,6 +33,8 @@ local MEMORY_STORES_EXPIRATION_MINIMUM = 600
 local MEMORY_STORES_EXPIRATION_MAXIMUM = 3888000
 local MAX_ITEMS_PER_LIST_REQUEST = 500
 local MAX_ITEMS_PER_LIST_REQUEST_EXCLUDE_DELETED_KEYS = 100
+local RATE_LIMIT_MAXIMUM = 10000
+local PROCESS_AUTO_FAILURE_TIMEOUT_MINIMUM = 600
 
 --[[
     Validates the universeId config
@@ -456,6 +458,56 @@ local function memoryStoresStorageLimitValidator(configValue: string): (boolean,
 end
 
 --[[
+    Creates a validator for a per-server data store rate limit config
+    @param configName string - The name of the rate limit config
+    @return (string) -> (boolean, number | string) - A validator returning a success boolean, and the validated config value or an error message if the config value is invalid
+--]]
+local function createRateLimitValidator(configName: string): (string) -> (boolean, number | string)
+    return function(configValue: string): (boolean, number | string)
+        local tryGetNumber = tonumber(configValue)
+        if not tryGetNumber then
+            return false, "'" .. configName .. "' must be a number"
+        end
+
+        if math.floor(tryGetNumber) ~= tryGetNumber then
+            return false, "'" .. configName .. "' must be an integer"
+        end
+
+        if tryGetNumber <= 0 then
+            return false, "'" .. configName .. "' must be a positive number"
+        end
+
+        if tryGetNumber > RATE_LIMIT_MAXIMUM then
+            return false, "'" .. configName .. "' must be less than or equal to " .. RATE_LIMIT_MAXIMUM
+        end
+
+        return true, tryGetNumber
+    end
+end
+
+--[[
+    Validates the processAutoFailureTimeout config
+    @param configValue string - The config value
+    @return (boolean, number | string) - A success boolean, and the validated config value or an error message if the config value is invalid
+--]]
+local function processAutoFailureTimeoutValidator(configValue: string): (boolean, number | string)
+    local tryGetNumber = tonumber(configValue)
+    if not tryGetNumber then
+        return false, "'processAutoFailureTimeout' must be a number"
+    end
+
+    if math.floor(tryGetNumber) ~= tryGetNumber or tryGetNumber == math.huge then
+        return false, "'processAutoFailureTimeout' must be an integer"
+    end
+
+    if tryGetNumber < PROCESS_AUTO_FAILURE_TIMEOUT_MINIMUM then
+        return false, "'processAutoFailureTimeout' must be at least " .. PROCESS_AUTO_FAILURE_TIMEOUT_MINIMUM .. " seconds"
+    end
+
+    return true, tryGetNumber
+end
+
+--[[
     Validates that the failed items config is large enough to resume
     @param configValue number - The config value
     @param currentFailedItems number - The current number of failed items
@@ -638,7 +690,16 @@ local Validators: { [string]: (any) -> (boolean, string | number | boolean) } = 
     ["errorLogMaxLength"] = errorLogMaxLengthValidator,
     ["progressRefreshTimeout"] = progressRefreshTimeoutValidator,
     ["memoryStoresExpiration"] = memoryStoresExpirationValidator,
-    ["memoryStoresStorageLimit"] = memoryStoresStorageLimitValidator
+    ["memoryStoresStorageLimit"] = memoryStoresStorageLimitValidator,
+    ["standardReadRateLimit"] = createRateLimitValidator("standardReadRateLimit"),
+    ["standardWriteRateLimit"] = createRateLimitValidator("standardWriteRateLimit"),
+    ["standardListRateLimit"] = createRateLimitValidator("standardListRateLimit"),
+    ["standardRemoveRateLimit"] = createRateLimitValidator("standardRemoveRateLimit"),
+    ["orderedReadRateLimit"] = createRateLimitValidator("orderedReadRateLimit"),
+    ["orderedWriteRateLimit"] = createRateLimitValidator("orderedWriteRateLimit"),
+    ["orderedListRateLimit"] = createRateLimitValidator("orderedListRateLimit"),
+    ["orderedRemoveRateLimit"] = createRateLimitValidator("orderedRemoveRateLimit"),
+    ["processAutoFailureTimeout"] = processAutoFailureTimeoutValidator
 }
 
 return {

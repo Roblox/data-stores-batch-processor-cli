@@ -91,6 +91,7 @@ ProcessDataStores.Execute = function(processName: string, configs: Types.Process
     -- Prompt to start batch process
     CLIO.PrintConfigs(Constants.CommandDetails[Constants.Commands.ProcessDataStores].configurations, configs)
     CLIO.PrintMemoryStoresUsageInformation(configs)
+    CLIO.PrintDataStoresRateLimitWarning()
     CLIO.ShowProcessWidth()
     CLIO.PromptForConfirmation("start the process")
     CLIO.PrintDirectionToCLILogFile(processName, configs.outputDirectory)

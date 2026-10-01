@@ -36,7 +36,7 @@ return function(dataStoreName)
     local migratedDS = DataStoreService:GetDataStore(ds2Key, MIGRATED_DS_SCOPE)
 
     -- Store the first sorted page
-    waitForBudgetAsync(Enum.DataStoreRequestType.GetSortedAsync, 1)
+    waitForBudgetAsync(Enum.DataStoreRequestType.OrderedList, 1)
     local pages = ds2ODS:GetSortedAsync(false, 100)
 
     -------------
@@ -51,11 +51,11 @@ return function(dataStoreName)
         if latestVersion then
             -- Get the data value from the SDS
             local version = latestVersion.value
-            waitForBudgetAsync(Enum.DataStoreRequestType.GetAsync, 2)
+            waitForBudgetAsync(Enum.DataStoreRequestType.StandardRead, 2)
             local data = ds2SDS:GetAsync(version)
 
             -- Move this data into the new SDS
-            waitForBudgetAsync(Enum.DataStoreRequestType.SetIncrementAsync, 1)
+            waitForBudgetAsync(Enum.DataStoreRequestType.StandardWrite, 1)
             migratedDS:UpdateAsync(playerId, function(oldData)
                 if oldData then
                     return oldData
@@ -78,8 +78,8 @@ return function(dataStoreName)
         for i, key in ipairs(pages:GetCurrentPage()) do
             if i ~= 1 or not firstPage then
                 -- Attempt deletion
-                waitForBudgetAsync(Enum.DataStoreRequestType.SetIncrementAsync, 1)
-                waitForBudgetAsync(Enum.DataStoreRequestType.SetIncrementSortedAsync, 1)
+                waitForBudgetAsync(Enum.DataStoreRequestType.StandardRemove, 1)
+                waitForBudgetAsync(Enum.DataStoreRequestType.OrderedRemove, 1)
                 ds2ODS:RemoveAsync(key.value)
                 ds2SDS:RemoveAsync(key.value)
             end
@@ -89,7 +89,7 @@ return function(dataStoreName)
             break
         end
 
-        waitForBudgetAsync(Enum.DataStoreRequestType.GetSortedAsync, 1)
+        waitForBudgetAsync(Enum.DataStoreRequestType.OrderedList, 1)
         pages:AdvanceToNextPageAsync()
         firstPage = false
     end

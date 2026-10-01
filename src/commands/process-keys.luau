@@ -98,6 +98,7 @@ ProcessKeys.Execute = function(processName: string, configs: Types.ProcessKeysCo
     -- Prompt to start batch process
     CLIO.PrintConfigs(Constants.CommandDetails[Constants.Commands.ProcessKeys].configurations, configs)
     CLIO.PrintMemoryStoresUsageInformation(configs)
+    CLIO.PrintDataStoresRateLimitWarning()
     CLIO.ShowProcessWidth()
     CLIO.PromptForConfirmation("start the process")
     CLIO.PrintDirectionToCLILogFile(processName, configs.outputDirectory)

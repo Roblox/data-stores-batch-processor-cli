@@ -195,6 +195,15 @@ When resuming a process, all original configurations are loaded from the saved s
 - `retryExponentialBackoff`
 - `processItemRateLimit`
 - `progressRefreshTimeout`
+- `processAutoFailureTimeout`
+- `standardReadRateLimit`
+- `standardWriteRateLimit`
+- `standardListRateLimit`
+- `standardRemoveRateLimit`
+- `orderedReadRateLimit`
+- `orderedWriteRateLimit`
+- `orderedListRateLimit`
+- `orderedRemoveRateLimit`
 
 **Important Notes**:
 
@@ -224,6 +233,9 @@ lune run batch-process cleanup <process-name> --config <filepath>
 **Option:**
 
 - **`--universe-id / -u`** : The universe to load / resume the batch process on.
+
+**Shared Options:**
+The 8 rate-limit options (`standardReadRateLimit`, `standardWriteRateLimit`, `standardListRateLimit`, `standardRemoveRateLimit`, `orderedReadRateLimit`, `orderedWriteRateLimit`, `orderedListRateLimit`, `orderedRemoveRateLimit`) can also be supplied to override the values stored on the original process. Omitted options use the stored values, or the defaults if the process was created before these options existed. See **Appendix B: Configuration Glossary** for descriptions and defaults.
 
 ### **4.5. list**
 
@@ -515,10 +527,19 @@ _The default values are suitable for most simple migration or deletion tasks. Fo
 | memoryStoresExpiration   | `--memory-stores-expiration`    | 3888000 | Expiration time in seconds for all memory store entries related to the process.                                                      |
 | memoryStoresStorageLimit | `--memory-stores-storage-limit` | \-1     | Storage limit for memory stores (in kilobytes) (-1 for no limit).                                                                    |
 | numRetries               | `--num-retries`                 | 4       | Number of times to retry processing a single item before marking it as failed.                                                       |
+| orderedListRateLimit     | `--ordered-list-rate-limit`     | 10000   | Base per-server rate limit (requests per minute) for ordered data store list requests.                                               |
+| orderedReadRateLimit     | `--ordered-read-rate-limit`     | 10000   | Base per-server rate limit (requests per minute) for ordered data store read requests.                                               |
+| orderedRemoveRateLimit   | `--ordered-remove-rate-limit`   | 10000   | Base per-server rate limit (requests per minute) for ordered data store remove requests.                                             |
+| orderedWriteRateLimit    | `--ordered-write-rate-limit`    | 10000   | Base per-server rate limit (requests per minute) for ordered data store write requests.                                              |
+| processAutoFailureTimeout | `--process-auto-failure-timeout` | 600    | Time (in seconds) before a stuck process is automatically failed. Must be at least 600 seconds.                                      |
 | processItemRateLimit     | `--process-item-rate-limit`     | 50      | Maximum number of items a single processing instance can process per minute.                                                         |
 | progressRefreshTimeout   | `--progress-refresh-timeout`    | 5       | Interval in seconds for the Stage 1 session to timeout between updating the overall process state and listing jobs to the job queue. |
 | retryExponentialBackoff  | `--retry-exponential-backoff`   | 2       | The multiplier for exponential backoff on retry timeouts. 1 for no backoff.                                                          |
 | retryTimeoutBase         | `--retry-timeout-base`          | 0.5     | The base timeout in seconds for retries. `Total wait = base * (backoff ^ retry_attempt)`.                                            |
+| standardListRateLimit    | `--standard-list-rate-limit`    | 10000   | Base per-server rate limit (requests per minute) for standard data store list requests.                                              |
+| standardReadRateLimit    | `--standard-read-rate-limit`    | 10000   | Base per-server rate limit (requests per minute) for standard data store read requests.                                              |
+| standardRemoveRateLimit  | `--standard-remove-rate-limit`  | 10000   | Base per-server rate limit (requests per minute) for standard data store remove requests.                                            |
+| standardWriteRateLimit   | `--standard-write-rate-limit`   | 10000   | Base per-server rate limit (requests per minute) for standard data store write requests.                                             |
 
 #### **`process-keys` Specific Configurations**
 

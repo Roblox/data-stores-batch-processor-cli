@@ -63,7 +63,16 @@ export type ProcessingConfigs = {
     errorLogMaxLength: number, -- The maximum length of the error log
     progressRefreshTimeout: number, -- The timeout for refreshing progress
     memoryStoresExpiration: number, -- The expiration time for memory stores
-    memoryStoresStorageLimit: number -- The storage limit for memory stores
+    memoryStoresStorageLimit: number, -- The storage limit for memory stores
+    standardReadRateLimit: number, -- Base rate limit for standard data store read requests
+    standardWriteRateLimit: number, -- Base rate limit for standard data store write requests
+    standardListRateLimit: number, -- Base rate limit for standard data store list requests
+    standardRemoveRateLimit: number, -- Base rate limit for standard data store remove requests
+    orderedReadRateLimit: number, -- Base rate limit for ordered data store read requests
+    orderedWriteRateLimit: number, -- Base rate limit for ordered data store write requests
+    orderedListRateLimit: number, -- Base rate limit for ordered data store list requests
+    orderedRemoveRateLimit: number, -- Base rate limit for ordered data store remove requests
+    processAutoFailureTimeout: number -- Time (in seconds) before a stuck process is automatically failed
 }
 
 --[[
@@ -102,14 +111,31 @@ export type ResumeConfigs = {
     errorLogMaxLength: number,
     progressRefreshTimeout: number,
     memoryStoresExpiration: number,
-    memoryStoresStorageLimit: number
+    memoryStoresStorageLimit: number,
+    standardReadRateLimit: number,
+    standardWriteRateLimit: number,
+    standardListRateLimit: number,
+    standardRemoveRateLimit: number,
+    orderedReadRateLimit: number,
+    orderedWriteRateLimit: number,
+    orderedListRateLimit: number,
+    orderedRemoveRateLimit: number,
+    processAutoFailureTimeout: number
 }
 
 --[[
     Cleanup configuration type.
 ]]
 export type CleanupConfigs = {
-    universeId: string
+    universeId: string,
+    standardReadRateLimit: number?,
+    standardWriteRateLimit: number?,
+    standardListRateLimit: number?,
+    standardRemoveRateLimit: number?,
+    orderedReadRateLimit: number?,
+    orderedWriteRateLimit: number?,
+    orderedListRateLimit: number?,
+    orderedRemoveRateLimit: number?
 }
 
 --[[
