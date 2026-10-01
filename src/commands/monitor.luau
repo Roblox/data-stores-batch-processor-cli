@@ -27,7 +27,6 @@ local EXPIRE_STAGE_1_SESSION_TASK_LOOP_INTERVAL = 5
 local EXPIRE_STAGE_2_SESSION_TASK_LOOP_INTERVAL = 60
 local WRITE_FAILED_ITEMS_LOOP_INTERVAL = 60
 local WRITE_BATCH_PROCESS_LOOP_INTERVAL = 5
-local TIME_BEFORE_AUTOMATIC_FAILURE = 600
 local WINDOW_SIZE = 60
 
 -- Global variables
@@ -105,7 +104,7 @@ local function progressUpdate(
 
     -- Check if the process is stuck
     if not values.listingComplete and values.scannedItems == lastScannedItems then
-        if datetime.now().unixTimestamp - lastScannedItemsUpdate > TIME_BEFORE_AUTOMATIC_FAILURE then
+        if datetime.now().unixTimestamp - lastScannedItemsUpdate > configs.processAutoFailureTimeout then
             FileIO.AppendToCLILogFile(processName, configs.outputDirectory, "Warning: The process is stuck. Please check your stage 1 logs at " .. configs.outputDirectory .. "/" .. processName .. "/session_logs/stage1 to diagnose the issue.")
             CLIO.Error("The process is stuck. Please check your stage 1 logs at " .. configs.outputDirectory .. "/" .. processName .. "/session_logs/stage1 to diagnose the issue.", function()
                 ProcessUtil.FinalizeOnExit(processName, configs, openCloudClient)

@@ -44,7 +44,7 @@ return function(dataStoreName)
     -- See https://create.roblox.com/store/asset/100741523916104/BETA-Berezaa-Method-Data-Migration-Tool
     local migratedData = migratedDS:GetAsync(playerId)
     if migratedData == nil then
-        waitForBudgetAsync(Enum.DataStoreRequestType.GetSortedAsync, 1)
+        waitForBudgetAsync(Enum.DataStoreRequestType.OrderedList, 1)
         local pages = ds2ODS:GetSortedAsync(false, 1)
 
         -- Get the latest version
@@ -52,11 +52,11 @@ return function(dataStoreName)
         if latestVersion then
             -- Get the data value from the SDS
             local version = latestVersion.value
-            waitForBudgetAsync(Enum.DataStoreRequestType.GetAsync, 2)
+            waitForBudgetAsync(Enum.DataStoreRequestType.StandardRead, 2)
             local data = ds2SDS:GetAsync(version)
 
             -- Move this data into the new SDS
-            waitForBudgetAsync(Enum.DataStoreRequestType.SetIncrementAsync, 1)
+            waitForBudgetAsync(Enum.DataStoreRequestType.StandardWrite, 1)
             migratedDS:UpdateAsync(playerId, function(oldData)
                 if oldData then
                     return oldData

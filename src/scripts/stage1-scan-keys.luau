@@ -33,7 +33,16 @@ type ProcessingConfigs = {
     errorLogMaxLength: number, -- The maximum length of the error log
     progressRefreshTimeout: number, -- The timeout for refreshing progress
     memoryStoresExpiration: number, -- The expiration time for memory stores
-    memoryStoresStorageLimit: number -- The storage limit for memory stores
+    memoryStoresStorageLimit: number, -- The storage limit for memory stores
+    standardReadRateLimit: number, -- Base rate limit for standard data store read requests
+    standardWriteRateLimit: number, -- Base rate limit for standard data store write requests
+    standardListRateLimit: number, -- Base rate limit for standard data store list requests
+    standardRemoveRateLimit: number, -- Base rate limit for standard data store remove requests
+    orderedReadRateLimit: number, -- Base rate limit for ordered data store read requests
+    orderedWriteRateLimit: number, -- Base rate limit for ordered data store write requests
+    orderedListRateLimit: number, -- Base rate limit for ordered data store list requests
+    orderedRemoveRateLimit: number, -- Base rate limit for ordered data store remove requests
+    processAutoFailureTimeout: number -- Time (in seconds) before a stuck process is automatically failed
 }
 
 type ScanKeysConfigs = { 
@@ -143,6 +152,21 @@ local storagePoolMap: MemoryStoreSortedMap -- Stores the batch process' storage 
 -- Global references to data store objects
 local dataStore: DataStore -- DataStore object to be scanned
 local batchProcessDataStoresMap: DataStore -- Stores the batch process backup
+
+--[[
+    Sets the per-server rate limits for all standard and ordered data store request types.
+    @param configs ProcessKeysConfigs - The configuration object containing the rate limits
+]]
+local function applyRateLimits(configs: ProcessKeysConfigs): ()
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardRead,   configs.standardReadRateLimit,   0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardWrite,  configs.standardWriteRateLimit,  0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardList,   configs.standardListRateLimit,   0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardRemove, configs.standardRemoveRateLimit, 0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedRead,    configs.orderedReadRateLimit,    0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedWrite,   configs.orderedWriteRateLimit,   0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedList,    configs.orderedListRateLimit,    0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedRemove,  configs.orderedRemoveRateLimit,  0)
+end
 
 --[[
     Function to call and retry a given function, up to maxAttempts times.
@@ -852,7 +876,7 @@ local function processStage1Async(): ()
     local setBatchProcessDataStoreBackupSuccess: boolean, setBatchProcessDataStoreBackupResult: string = retryAsync(function()
         batchProcessDataStoresMap:SetAsync(PROCESS_NAME, processInfo)
     end)
-    if not setBatchProcessDataStoreBackupSuccess then
+    if setBatchProcessDataStoreBackupSuccess then
         print("Info: Backed up the batch process to data stores")
     else
         error("Error: Failed to backup the batch process to data stores. Reason - " .. setBatchProcessDataStoreBackupResult :: string)
@@ -905,6 +929,9 @@ return function(guid: string, processName: string, configs: ProcessKeysConfigs):
     else
         dataStore = DataStoreService:GetDataStore(CONFIGS.dataStoreName, CONFIGS.dataStoreScope or "global")
     end
+
+    -- Apply configured per-server rate limits before any data store calls
+    applyRateLimits(CONFIGS)
 
     -- Get the session path
     SESSION_PATH = getSessionPath(guid)

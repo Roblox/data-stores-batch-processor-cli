@@ -159,8 +159,9 @@ ConfigLoader.LoadConfigs = function(
         inverseFlagMap
     )
 
-    -- Apply defaults to configs
-    if command ~= Constants.Commands.Resume then
+    -- Apply defaults to configs. Resume and Cleanup keep placeholders so that omitted
+    -- configs can fall back to the stored process configs (see CombineConfigs).
+    if command ~= Constants.Commands.Resume and command ~= Constants.Commands.Cleanup then
         applyDefaultsToConfigs(configs)
     end
 
@@ -192,6 +193,33 @@ ConfigLoader.ValidateConfigs = function(configs: Types.ConfigValues): ()
 end
 
 --[[
+    Combines the new configs with the stored configs of an existing process. Each config in
+    configList resolves to the explicitly provided value, then the stored value, then the default.
+    Configs not in configList keep their stored value.
+    @param configs Types.ConfigValues - The new configs
+    @param pastConfigs Types.ConfigValues - The stored configs
+    @param configList { string } - The configs that may be overridden or defaulted
+    @return Types.ConfigValues - The combined configs
+]]
+ConfigLoader.CombineConfigs = function(
+    configs: Types.ConfigValues,
+    pastConfigs: Types.ConfigValues,
+    configList: { string }
+): Types.ConfigValues
+    local combinedConfigs: Types.ConfigValues = table.clone(pastConfigs)
+    for _, configName: string in ipairs(configList) do
+        local configValue = configs[configName]
+        local configOption = Constants.ConfigurationOptions[configName]
+        if configValue ~= nil and configValue ~= Constants.PlaceHolder then
+            combinedConfigs[configName] = configValue
+        elseif combinedConfigs[configName] == nil and configOption and configOption.default ~= nil then
+            combinedConfigs[configName] = configOption.default
+        end
+    end
+    return combinedConfigs
+end
+
+--[[
     Prompts the user for any missing configuration values.
     @param command Types.CommandType - The command to prompt for missing configurations for
     @param configs Types.ConfigValues - The current configuration values
@@ -201,8 +229,8 @@ ConfigLoader.PromptForMissingConfigs = function(
     command: Types.CommandType, 
     configs: Types.ConfigValues
 ): Types.ConfigValues
-    -- Skip prompting for resume command except for universeId
-    if command == Constants.Commands.Resume then
+    -- Skip prompting for resume and cleanup commands except for universeId
+    if command == Constants.Commands.Resume or command == Constants.Commands.Cleanup then
         if configs['universeId'] == Constants.PlaceHolder then
             configs['universeId'] = CLIO.Prompt(Constants.ConfigurationOptions['universeId'].prompt :: string, 
                 ConfigValidators.Validators['universeId']

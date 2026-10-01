@@ -88,6 +88,21 @@ local function retryAsync(
 end
 
 --[[
+    Sets the per-server rate limits for all standard and ordered data store request types.
+    @param configs { [string]: any } - The configuration object containing the rate limits
+]]
+local function applyRateLimits(configs: { [string]: any }): ()
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardRead,   configs.standardReadRateLimit,   0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardWrite,  configs.standardWriteRateLimit,  0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardList,   configs.standardListRateLimit,   0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardRemove, configs.standardRemoveRateLimit, 0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedRead,    configs.orderedReadRateLimit,    0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedWrite,   configs.orderedWriteRateLimit,   0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedList,    configs.orderedListRateLimit,    0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedRemove,  configs.orderedRemoveRateLimit,  0)
+end
+
+--[[
     This function will remove all items from the queue.
     @param queue MemoryStoreQueue - The queue to remove the items from
 ]]
@@ -226,10 +241,13 @@ end
     Main entry point for the cleanup script.
     This function initializes the environment and kicks off the cleanup.
     @param processName string - Name of the batch process
-    @param configs Types.ProcessKeysConfigs|Types.ProcessDatastoresConfigs - Configuration object containing settings for the batch process
+    @param configs { [string]: any } - Configuration object containing settings for the batch process
     @return number - 0 on successful completion
 ]]
-return function(processName: string)  
+return function(processName: string, configs: { [string]: any })
+    -- Apply configured per-server rate limits before any data store calls
+    applyRateLimits(configs)
+
     -- Initialize memory store objects
     local itemPageMapName = "_RBX_batch-process-pages" .. "-" .. processName
     local failedItemLogsMapName = "_RBX_batch-process-failed-item-logs" .. "-" .. processName

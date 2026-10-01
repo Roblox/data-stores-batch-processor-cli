@@ -34,8 +34,7 @@
   repository and stage a pull request with your contributions. Please see the
   <strong><a href="./LICENSE">LICENSE</a></strong> for details. This tool uses
   third-party modules; their licenses are listed in
-  <strong><a href="./ATTRIBUTIONS.md">ATTRIBUTIONS.md</a></strong
-  >.
+  <strong><a href="./ATTRIBUTIONS.md">ATTRIBUTIONS.md</a>.</strong>
 </p>
 <h2 id="-1-overview-"><strong>1. Overview</strong></h2>
 <p>
@@ -290,8 +289,7 @@ lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-buil
 <ul>
   <li>
     <strong><code>&lt;process-name&gt;</code></strong
-    >: The unique name of the new batch process. The process name can be at most
-    18 characters long.
+    >: The unique name of the new batch process.
   </li>
 </ul>
 <p><strong>Command-Specific Options:</strong></p>
@@ -337,7 +335,7 @@ lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-buil
 <ul>
   <li>
     <strong><code>&lt;process-name&gt;</code></strong> : The unique name of the
-    new batch process. The process name can be at most 18 characters long.
+    new batch process.
   </li>
 </ul>
 <p><strong>Command-Specific Options:</strong></p>
@@ -398,6 +396,15 @@ lune <span class="hljs-built_in">run</span> batch-process resume &lt;process-<sp
   <li><code>retryExponentialBackoff</code></li>
   <li><code>processItemRateLimit</code></li>
   <li><code>progressRefreshTimeout</code></li>
+  <li><code>processAutoFailureTimeout</code></li>
+  <li><code>standardReadRateLimit</code></li>
+  <li><code>standardWriteRateLimit</code></li>
+  <li><code>standardListRateLimit</code></li>
+  <li><code>standardRemoveRateLimit</code></li>
+  <li><code>orderedReadRateLimit</code></li>
+  <li><code>orderedWriteRateLimit</code></li>
+  <li><code>orderedListRateLimit</code></li>
+  <li><code>orderedRemoveRateLimit</code></li>
 </ul>
 <p><strong>Important Notes</strong>:</p>
 <ul>
@@ -448,6 +455,19 @@ lune <span class="hljs-built_in">run</span> batch-process cleanup &lt;process-<s
     resume the batch process on.
   </li>
 </ul>
+<p><strong>Shared Options:</strong></p>
+<p>
+  The 8 rate-limit options (<code>standardReadRateLimit</code>,
+  <code>standardWriteRateLimit</code>, <code>standardListRateLimit</code>,
+  <code>standardRemoveRateLimit</code>, <code>orderedReadRateLimit</code>,
+  <code>orderedWriteRateLimit</code>, <code>orderedListRateLimit</code>,
+  <code>orderedRemoveRateLimit</code>) can also be supplied to override the
+  values stored on the original process. Omitted options use the stored
+  values, or the defaults if the process was created before these options
+  existed. See
+  <strong>Appendix B: Configuration Glossary</strong> for descriptions and
+  defaults.
+</p>
 <h3 id="-4-5-list-"><strong>4.5. list</strong></h3>
 <p>Lists all batch processes.</p>
 <p><strong>Usage:</strong></p>
@@ -822,7 +842,7 @@ lune run batch-<span class="hljs-built_in">process</span> <span class="hljs-buil
       deletion:</strong
     >
     e.g.<br /><code
-      >lune run batch-process process-keys DS_Deletion -c &lt;config
+      >lune run batch-process process-keys DS_DELETION_JUNE17 -c &lt;config
       filepath&gt;.json</code
     >
   </li>
@@ -875,8 +895,8 @@ end</span>
       deletion:</strong
     >
     e.g.<br /><code
-      >lune run batch-process process-data-stores DS_Deletion -c &lt;config
-      filepath&gt;.json</code
+      >lune run batch-process process-data-stores DS_DELETION_JUNE17 -c
+      &lt;config filepath&gt;.json</code
     >
   </li>
 </ol>
@@ -1021,7 +1041,7 @@ end</span>
   </li>
   <li>
     Run the <code>process-data-stores</code> command, e.g.<br /><code
-      >lune run batch-process process-data-stores DS2_Migration -c
+      >lune run batch-process process-data-stores DS2_Migration_June17 -c
       examples/ds2-config.json</code
     >
   </li>
@@ -1215,7 +1235,8 @@ end</span>
       <td style="text-align: left"><code>--max-items-per-job</code></td>
       <td style="text-align: left">50</td>
       <td style="text-align: left">
-        Maximum number of items to process in one job.
+        Maximum number of items to process in one job. Note that if
+        <code>excludeDeletedKeys</code>
       </td>
     </tr>
     <tr>
@@ -1255,6 +1276,55 @@ end</span>
       </td>
     </tr>
     <tr>
+      <td style="text-align: left">orderedListRateLimit</td>
+      <td style="text-align: left"><code>--ordered-list-rate-limit</code></td>
+      <td style="text-align: left">10000</td>
+      <td style="text-align: left">
+        Base per-server rate limit (requests per minute) for ordered data
+        store list requests.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">orderedReadRateLimit</td>
+      <td style="text-align: left"><code>--ordered-read-rate-limit</code></td>
+      <td style="text-align: left">10000</td>
+      <td style="text-align: left">
+        Base per-server rate limit (requests per minute) for ordered data
+        store read requests.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">orderedRemoveRateLimit</td>
+      <td style="text-align: left">
+        <code>--ordered-remove-rate-limit</code>
+      </td>
+      <td style="text-align: left">10000</td>
+      <td style="text-align: left">
+        Base per-server rate limit (requests per minute) for ordered data
+        store remove requests.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">orderedWriteRateLimit</td>
+      <td style="text-align: left"><code>--ordered-write-rate-limit</code></td>
+      <td style="text-align: left">10000</td>
+      <td style="text-align: left">
+        Base per-server rate limit (requests per minute) for ordered data
+        store write requests.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">processAutoFailureTimeout</td>
+      <td style="text-align: left">
+        <code>--process-auto-failure-timeout</code>
+      </td>
+      <td style="text-align: left">600</td>
+      <td style="text-align: left">
+        Time (in seconds) before a stuck process is automatically failed. Must
+        be at least 600 seconds.
+      </td>
+    </tr>
+    <tr>
       <td style="text-align: left">processItemRateLimit</td>
       <td style="text-align: left"><code>--process-item-rate-limit</code></td>
       <td style="text-align: left">50</td>
@@ -1288,6 +1358,44 @@ end</span>
       <td style="text-align: left">
         The base timeout in seconds for retries.
         <code>Total wait = base * (backoff ^ retry_attempt)</code>.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">standardListRateLimit</td>
+      <td style="text-align: left"><code>--standard-list-rate-limit</code></td>
+      <td style="text-align: left">10000</td>
+      <td style="text-align: left">
+        Base per-server rate limit (requests per minute) for standard data
+        store list requests.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">standardReadRateLimit</td>
+      <td style="text-align: left"><code>--standard-read-rate-limit</code></td>
+      <td style="text-align: left">10000</td>
+      <td style="text-align: left">
+        Base per-server rate limit (requests per minute) for standard data
+        store read requests.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">standardRemoveRateLimit</td>
+      <td style="text-align: left">
+        <code>--standard-remove-rate-limit</code>
+      </td>
+      <td style="text-align: left">10000</td>
+      <td style="text-align: left">
+        Base per-server rate limit (requests per minute) for standard data
+        store remove requests.
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: left">standardWriteRateLimit</td>
+      <td style="text-align: left"><code>--standard-write-rate-limit</code></td>
+      <td style="text-align: left">10000</td>
+      <td style="text-align: left">
+        Base per-server rate limit (requests per minute) for standard data
+        store write requests.
       </td>
     </tr>
   </tbody>

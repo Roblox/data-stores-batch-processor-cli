@@ -7,6 +7,7 @@
 ]]
 
 -- Services
+local DataStoreService = game:GetService("DataStoreService")
 local MemoryStoreService = game:GetService("MemoryStoreService")
 
 -- Types
@@ -29,7 +30,16 @@ type ProcessingConfigs = {
     errorLogMaxLength: number, -- The maximum length of the error log
     progressRefreshTimeout: number, -- The timeout for refreshing progress
     memoryStoresExpiration: number, -- The expiration time for memory stores
-    memoryStoresStorageLimit: number -- The storage limit for memory stores
+    memoryStoresStorageLimit: number, -- The storage limit for memory stores
+    standardReadRateLimit: number, -- Base rate limit for standard data store read requests
+    standardWriteRateLimit: number, -- Base rate limit for standard data store write requests
+    standardListRateLimit: number, -- Base rate limit for standard data store list requests
+    standardRemoveRateLimit: number, -- Base rate limit for standard data store remove requests
+    orderedReadRateLimit: number, -- Base rate limit for ordered data store read requests
+    orderedWriteRateLimit: number, -- Base rate limit for ordered data store write requests
+    orderedListRateLimit: number, -- Base rate limit for ordered data store list requests
+    orderedRemoveRateLimit: number, -- Base rate limit for ordered data store remove requests
+    processAutoFailureTimeout: number -- Time (in seconds) before a stuck process is automatically failed
 }
 
 type ScanKeysConfigs = { 
@@ -171,6 +181,21 @@ local StaggeredTaskExecutor = function()
     end
     
     return StaggeredTaskExecutor
+end
+
+--[[
+    Sets the per-server rate limits for all standard and ordered data store request types.
+    @param configs ProcessKeysConfigs | ProcessDatastoresConfigs - The configuration object containing the rate limits
+]]
+local function applyRateLimits(configs: ProcessKeysConfigs | ProcessDatastoresConfigs): ()
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardRead,   configs.standardReadRateLimit,   0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardWrite,  configs.standardWriteRateLimit,  0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardList,   configs.standardListRateLimit,   0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.StandardRemove, configs.standardRemoveRateLimit, 0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedRead,    configs.orderedReadRateLimit,    0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedWrite,   configs.orderedWriteRateLimit,   0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedList,    configs.orderedListRateLimit,    0)
+    DataStoreService:SetRateLimitForRequestType(Enum.DataStoreRequestType.OrderedRemove,  configs.orderedRemoveRateLimit,  0)
 end
 
 --[[
@@ -435,6 +460,9 @@ return function(guid: string, processName: string, configs: ProcessKeysConfigs |
     -- Initialize global id and configs
     PROCESS_NAME = processName
     CONFIGS = configs
+
+    -- Apply configured per-server rate limits before any data store calls
+    applyRateLimits(CONFIGS)
 
     -- Initialize memory store objects
     local itemPageMapName = "_RBX_batch-process-pages" .. "-" .. PROCESS_NAME

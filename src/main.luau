@@ -22,7 +22,7 @@ local Resume = require('./commands/resume')
 local Types = require('./shared/types')
 
 -- Constants
-local MAX_PROCESS_NAME_LENGTH = 18
+local MAX_PROCESS_NAME_LENGTH = 50
 
 --[[
     Main entry point for the batch processor.
